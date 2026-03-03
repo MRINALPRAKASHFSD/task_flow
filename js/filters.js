@@ -1,6 +1,6 @@
 /**
  * TaskFlow — filters.js
- * Task filtering, search and sorting logic.
+ * Task filtering, search, grouping, and sorting logic.
  *
  * Copyright (c) 2026 Mrinal Prakash
  * SPDX-License-Identifier: MIT
@@ -18,6 +18,14 @@ export const SORT_OPTIONS = Object.freeze([
   'priority',
   'dueDate',
   'updated',
+]);
+
+export const GROUP_BY_OPTIONS = Object.freeze([
+  'none',
+  'priority',
+  'category',
+  'dueDate',
+  'status',
 ]);
 
 /**
@@ -72,8 +80,26 @@ export function filterByCategory(tasks, category) {
 }
 
 /**
+ * Filter tasks by tag.
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @param {string} tag
+ * @returns {import('./tasks.js').Task[]}
+ */
+export function filterByTag(tasks, tag) {
+  if (!Array.isArray(tasks)) return [];
+  if (!tag || tag === 'all') return tasks;
+  const target = normalise(tag.replace(/^#/, ''));
+  if (!target) return tasks;
+
+  return tasks.filter(t =>
+    Array.isArray(t.tags) && t.tags.some(tTag => normalise(tTag) === target)
+  );
+}
+
+/**
  * Filter tasks by search query.
- * Matches against title, description, and category (case-insensitive).
+ * Matches against title, description, category, tags, notes, and subtasks (case-insensitive).
  *
  * @param {import('./tasks.js').Task[]} tasks
  * @param {string} query
@@ -87,7 +113,10 @@ export function filterBySearch(tasks, query) {
   return tasks.filter(t =>
     normalise(t.title).includes(q) ||
     normalise(t.description).includes(q) ||
-    normalise(t.category).includes(q)
+    normalise(t.category).includes(q) ||
+    (Array.isArray(t.tags) && t.tags.some(tag => normalise(tag).includes(q))) ||
+    (typeof t.notes === 'string' && normalise(t.notes).includes(q)) ||
+    (Array.isArray(t.subtasks) && t.subtasks.some(st => normalise(st.title).includes(q)))
   );
 }
 
@@ -171,6 +200,82 @@ export function sortTasks(tasks, sortBy = 'default') {
 }
 
 /**
+ * Group an array of tasks by a given dimension.
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @param {'none'|'priority'|'category'|'dueDate'|'status'} [groupBy='none']
+ * @param {Date} [referenceDate]
+ * @returns {Array<{ key: string, label: string, count: number, tasks: import('./tasks.js').Task[] }>}
+ */
+export function groupTasks(tasks, groupBy = 'none', referenceDate = new Date()) {
+  if (!Array.isArray(tasks)) return [];
+
+  switch (groupBy) {
+    case 'priority': {
+      const high = tasks.filter(t => t.priority === 'high');
+      const med  = tasks.filter(t => t.priority === 'medium');
+      const low  = tasks.filter(t => t.priority === 'low');
+      return [
+        { key: 'high', label: 'High Priority', count: high.length, tasks: high },
+        { key: 'medium', label: 'Medium Priority', count: med.length, tasks: med },
+        { key: 'low', label: 'Low Priority', count: low.length, tasks: low },
+      ];
+    }
+
+    case 'category': {
+      const map = new Map();
+      for (const t of tasks) {
+        const cat = t.category || 'General';
+        if (!map.has(cat)) map.set(cat, []);
+        map.get(cat).push(t);
+      }
+      return Array.from(map.entries())
+        .map(([cat, list]) => ({ key: cat, label: cat, count: list.length, tasks: list }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    case 'dueDate': {
+      const overdue = [];
+      const today = [];
+      const upcoming = [];
+      const noDate = [];
+
+      for (const t of tasks) {
+        if (!t.dueDate) {
+          noDate.push(t);
+        } else if (isTaskOverdue(t, referenceDate)) {
+          overdue.push(t);
+        } else if (isTaskDueToday(t, referenceDate)) {
+          today.push(t);
+        } else {
+          upcoming.push(t);
+        }
+      }
+
+      return [
+        { key: 'overdue', label: 'Overdue', count: overdue.length, tasks: overdue },
+        { key: 'today', label: 'Due Today', count: today.length, tasks: today },
+        { key: 'upcoming', label: 'Upcoming', count: upcoming.length, tasks: upcoming },
+        { key: 'nodate', label: 'No Due Date', count: noDate.length, tasks: noDate },
+      ];
+    }
+
+    case 'status': {
+      const pending = tasks.filter(t => t.status === 'pending' && !t.completed);
+      const completed = tasks.filter(t => t.status === 'completed' || t.completed);
+      return [
+        { key: 'pending', label: 'Pending', count: pending.length, tasks: pending },
+        { key: 'completed', label: 'Completed', count: completed.length, tasks: completed },
+      ];
+    }
+
+    case 'none':
+    default:
+      return [{ key: 'all', label: 'All Tasks', count: tasks.length, tasks }];
+  }
+}
+
+/**
  * Apply all active filters and sorting to a task array in a unified single pass.
  *
  * @param {import('./tasks.js').Task[]} tasks
@@ -178,6 +283,7 @@ export function sortTasks(tasks, sortBy = 'default') {
  *   status?: string,
  *   search?: string,
  *   category?: string,
+ *   tag?: string,
  *   sortBy?: 'default'|'newest'|'oldest'|'priority'|'dueDate'|'updated',
  *   referenceDate?: Date
  * }} [options]
@@ -187,11 +293,13 @@ export function applyFilters(tasks, {
   status = 'all',
   search = '',
   category = 'all',
+  tag = 'all',
   sortBy = 'default',
   referenceDate = new Date(),
 } = {}) {
   let result = filterByStatus(tasks, status, referenceDate);
   result     = filterByCategory(result, category);
+  result     = filterByTag(result, tag);
   result     = filterBySearch(result, search);
   result     = sortTasks(result, sortBy);
   return result;
