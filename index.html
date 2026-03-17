@@ -75,6 +75,20 @@
 
       <div class="header-actions">
         <button
+          id="btn-header-palette"
+          class="btn btn-secondary btn-sm header-palette-btn"
+          type="button"
+          aria-label="Open command palette (Cmd+K)"
+          title="Command Palette (Cmd+K)"
+        >
+          <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span class="header-palette-kbd" aria-hidden="true">⌘K</span>
+        </button>
+
+        <button
           id="btn-header-add"
           class="btn btn-primary btn-sm header-add-btn"
           type="button"
@@ -113,6 +127,69 @@
          ==================================================== -->
     <aside id="app-sidebar" class="app-sidebar" aria-label="Main Navigation">
       <nav class="sidebar-nav-container">
+
+        <!-- App Menu Section -->
+        <div class="sidebar-section">
+          <div class="sidebar-section__title">Menu</div>
+          <ul class="sidebar-nav" role="list">
+            <li class="sidebar-nav__item">
+              <button
+                id="nav-btn-tasks"
+                type="button"
+                class="sidebar-nav__link sidebar-nav__link--primary is-active"
+                data-view="tasks"
+                aria-label="Open Tasks Dashboard"
+              >
+                <span class="sidebar-nav__icon-wrap" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                  </svg>
+                </span>
+                <span class="sidebar-nav__label">Dashboard</span>
+              </button>
+            </li>
+            <li class="sidebar-nav__item">
+              <button
+                id="nav-btn-calendar"
+                type="button"
+                class="sidebar-nav__link sidebar-nav__link--primary"
+                data-view="calendar"
+                aria-label="Open Calendar View"
+              >
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--blue" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </span>
+                <span class="sidebar-nav__label">Calendar</span>
+              </button>
+            </li>
+            <li class="sidebar-nav__item">
+              <button
+                id="nav-btn-analytics"
+                type="button"
+                class="sidebar-nav__link sidebar-nav__link--primary"
+                data-view="analytics"
+                aria-label="Open Productivity Analytics"
+              >
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--purple" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                </span>
+                <span class="sidebar-nav__label">Analytics</span>
+              </button>
+            </li>
+          </ul>
+        </div>
 
         <!-- Views Section -->
         <div class="sidebar-section">
@@ -413,6 +490,11 @@
           <p id="welcome-subtitle" class="section-subtitle">Plan smarter. Stay organized. Get things done.</p>
         </header>
 
+        <!-- ====================================================
+             TASKS VIEW PANEL (Default)
+             ==================================================== -->
+        <div id="tasks-view" class="view-panel is-active">
+
         <!-- ─── Dashboard Statistics ─── -->
         <section aria-label="Task statistics" class="stats-section">
           <div class="stats-grid">
@@ -595,6 +677,23 @@
               </span>
             </div>
 
+            <!-- Group By dropdown -->
+            <div class="group-select-wrapper select-wrapper">
+              <label for="group-by-select" class="sr-only">Group tasks by</label>
+              <select id="group-by-select" class="form-select toolbar-select" aria-label="Group tasks by">
+                <option value="none">No Grouping</option>
+                <option value="priority">Group by Priority</option>
+                <option value="category">Group by Category</option>
+                <option value="dueDate">Group by Due Date</option>
+                <option value="status">Group by Status</option>
+              </select>
+              <span class="select-chevron" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+
             <!-- Primary Add Task button -->
             <button id="btn-add-task" type="button" class="btn btn-primary" aria-label="Add new task">
               <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -639,6 +738,149 @@
           <!-- Task list container -->
           <div id="task-list" class="task-list" role="list" aria-live="polite"></div>
         </section>
+
+        </div><!-- /#tasks-view -->
+
+        <!-- ====================================================
+             CALENDAR VIEW PANEL
+             ==================================================== -->
+        <div id="calendar-view" class="view-panel" hidden>
+          <div class="calendar-panel">
+            <div class="calendar-header">
+              <div class="calendar-header__nav">
+                <h2 id="calendar-title" class="calendar-title">November 2026</h2>
+                <div class="calendar-nav-buttons">
+                  <button id="btn-cal-prev" type="button" class="btn btn-secondary btn-sm" aria-label="Previous month">
+                    <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                  <button id="btn-cal-today" type="button" class="btn btn-secondary btn-sm">Today</button>
+                  <button id="btn-cal-next" type="button" class="btn btn-secondary btn-sm" aria-label="Next month">
+                    <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="calendar-view-modes" role="group" aria-label="Calendar view mode">
+                <button id="cal-tab-month" type="button" class="filter-tab is-active" data-cal-view="month" aria-pressed="true">Month</button>
+                <button id="cal-tab-week" type="button" class="filter-tab" data-cal-view="week" aria-pressed="false">Week</button>
+                <button id="cal-tab-day" type="button" class="filter-tab" data-cal-view="day" aria-pressed="false">Day</button>
+              </div>
+            </div>
+
+            <!-- Calendar Grid Container -->
+            <div id="calendar-grid-container" class="calendar-grid-container" role="region" aria-label="Interactive Calendar"></div>
+
+            <!-- Selected Day Detail View -->
+            <div id="calendar-day-detail" class="calendar-day-detail" role="region" aria-label="Selected day tasks">
+              <div class="calendar-day-detail__header">
+                <h3 id="cal-day-detail-title" class="calendar-day-detail__title">Tasks for Selected Day</h3>
+                <button id="btn-cal-add-for-date" type="button" class="btn btn-primary btn-sm">
+                  <span>Add Task for this Date</span>
+                </button>
+              </div>
+              <div id="cal-day-detail-tasks" class="calendar-day-detail__tasks"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================
+             ANALYTICS VIEW PANEL
+             ==================================================== -->
+        <div id="analytics-view" class="view-panel" hidden>
+          <div class="analytics-panel">
+            <div class="analytics-header">
+              <div>
+                <h2 class="section-title">Productivity Analytics</h2>
+                <p class="section-subtitle">Real metrics and trends calculated directly from your task history.</p>
+              </div>
+              <div class="analytics-timeframe-tabs filter-tabs" role="group" aria-label="Analytics timeframe">
+                <button type="button" class="filter-tab is-active" data-timeframe="7d" aria-pressed="true">7 Days</button>
+                <button type="button" class="filter-tab" data-timeframe="30d" aria-pressed="false">30 Days</button>
+                <button type="button" class="filter-tab" data-timeframe="90d" aria-pressed="false">90 Days</button>
+                <button type="button" class="filter-tab" data-timeframe="all" aria-pressed="false">All Time</button>
+              </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="stats-grid analytics-stats-grid">
+              <div class="stat-card">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-total" class="stat-card__value">0</div>
+                  <div class="stat-card__label">Tasks in Period</div>
+                </div>
+              </div>
+              <div class="stat-card stat-card--completed">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-completed" class="stat-card__value">0</div>
+                  <div class="stat-card__label">Completed</div>
+                </div>
+              </div>
+              <div class="stat-card stat-card--pending">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-pending" class="stat-card__value">0</div>
+                  <div class="stat-card__label">Pending</div>
+                </div>
+              </div>
+              <div class="stat-card stat-card--overdue">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-overdue" class="stat-card__value">0</div>
+                  <div class="stat-card__label">Overdue</div>
+                </div>
+              </div>
+              <div class="stat-card stat-card--high">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-rate" class="stat-card__value">0%</div>
+                  <div class="stat-card__label">Completion Rate</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card__body">
+                  <div id="analytics-stat-avg-per-day" class="stat-card__value">0.0</div>
+                  <div class="stat-card__label">Avg / Day</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trends & Insights Grid -->
+            <div class="analytics-grid">
+              <div class="analytics-card analytics-card--trend">
+                <div class="analytics-card__header">
+                  <h3 class="analytics-card__title">Daily Completion Trend</h3>
+                  <span class="text-sm text-muted">Completed vs Active</span>
+                </div>
+                <div id="analytics-trend-chart-container" class="analytics-chart-container"></div>
+              </div>
+
+              <div class="analytics-card analytics-card--insights">
+                <div class="analytics-card__header">
+                  <h3 class="analytics-card__title">Productivity Insights</h3>
+                </div>
+                <div id="analytics-insights-container" class="analytics-insights-body"></div>
+              </div>
+            </div>
+
+            <!-- Categories and Priority Breakdown -->
+            <div class="analytics-grid">
+              <div class="analytics-card">
+                <div class="analytics-card__header">
+                  <h3 class="analytics-card__title">Category Performance</h3>
+                </div>
+                <div id="analytics-category-container" class="analytics-breakdown-list"></div>
+              </div>
+
+              <div class="analytics-card">
+                <div class="analytics-card__header">
+                  <h3 class="analytics-card__title">Priority Distribution</h3>
+                </div>
+                <div id="analytics-priority-container" class="analytics-breakdown-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div><!-- /.main-inner -->
     </main>
@@ -770,18 +1012,118 @@
           </div>
 
           <!-- Due Date Row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-due-date" class="form-label">
+                Due Date <span class="text-muted text-sm">(optional)</span>
+              </label>
+              <input
+                id="field-due-date"
+                type="date"
+                class="form-input form-date-input"
+                aria-describedby="error-due-date"
+                aria-invalid="false"
+              />
+              <span id="error-due-date" class="form-error" role="alert" aria-live="assertive"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="field-reminder-time" class="form-label">
+                Reminder Time <span class="text-muted text-sm">(optional)</span>
+              </label>
+              <input
+                id="field-reminder-time"
+                type="time"
+                class="form-input"
+                aria-label="Reminder Time"
+              />
+            </div>
+          </div>
+
+          <!-- Recurrence -->
           <div class="form-group">
-            <label for="field-due-date" class="form-label">
-              Due Date <span class="text-muted text-sm">(optional)</span>
+            <label for="field-recurrence" class="form-label">
+              Repeat (Recurring Task)
+            </label>
+            <div class="select-wrapper">
+              <select id="field-recurrence" class="form-select" aria-label="Select recurrence rule">
+                <option value="none">Does not repeat</option>
+                <option value="daily">Every day</option>
+                <option value="weekdays">Every weekday (Mon–Fri)</option>
+                <option value="weekly">Every week</option>
+                <option value="monthly">Every month</option>
+                <option value="yearly">Every year</option>
+                <option value="custom">Custom interval…</option>
+              </select>
+              <span class="select-chevron" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            <div id="recurrence-custom-wrapper" class="form-group" style="margin-top: 0.5rem;" hidden>
+              <label for="field-recurrence-interval" class="form-label text-xs">
+                Repeat interval (every N days)
+              </label>
+              <input
+                id="field-recurrence-interval"
+                type="number"
+                min="1"
+                max="365"
+                value="1"
+                class="form-input form-input--sm"
+                aria-label="Custom repeat interval in days"
+              />
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label for="field-tags" class="form-label">
+              Tags <span class="text-muted text-sm">(comma-separated, max 20)</span>
             </label>
             <input
-              id="field-due-date"
-              type="date"
-              class="form-input form-date-input"
-              aria-describedby="error-due-date"
-              aria-invalid="false"
+              id="field-tags"
+              type="text"
+              class="form-input"
+              placeholder="e.g. work, urgent, sprint-1"
+              autocomplete="off"
             />
-            <span id="error-due-date" class="form-error" role="alert" aria-live="assertive"></span>
+          </div>
+
+          <!-- Subtasks -->
+          <div class="form-group">
+            <label class="form-label">
+              Subtasks
+            </label>
+            <div id="subtasks-editor-list" class="subtasks-editor-list"></div>
+            <div class="subtask-add-row">
+              <input
+                id="field-new-subtask"
+                type="text"
+                class="form-input"
+                placeholder="Add a step or subtask…"
+                maxlength="200"
+              />
+              <button id="btn-add-subtask" type="button" class="btn btn-secondary btn-sm">Add</button>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="field-notes" class="form-label">
+                Notes & Reference <span class="text-muted text-sm">(optional)</span>
+              </label>
+              <span class="form-counter" id="notes-counter">0 / 5000</span>
+            </div>
+            <textarea
+              id="field-notes"
+              class="form-textarea"
+              rows="3"
+              maxlength="5000"
+              placeholder="Additional notes, markdown details, or links…"
+            ></textarea>
           </div>
 
           <!-- Actions -->
@@ -896,7 +1238,45 @@
           </div>
         </div>
 
-        <!-- Backup & Restore Group -->
+        <!-- Smart Reminders Preferences Group -->
+        <div class="settings-group">
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Smart Reminders</h3>
+            <p class="settings-group__desc">Configure browser notifications and in-app alerts for due and overdue tasks.</p>
+          </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-browser-notifications" class="settings-label">Browser Notifications</label>
+              <p class="text-xs text-muted">Show system desktop notifications when TaskFlow is open in a tab.</p>
+            </div>
+            <div class="settings-control-row">
+              <input type="checkbox" id="setting-browser-notifications" class="form-checkbox" />
+              <button id="btn-request-notification-perm" type="button" class="btn btn-secondary btn-sm">
+                Request Permission
+              </button>
+            </div>
+          </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-inapp-alerts" class="settings-label">In-App Alert Toasts</label>
+              <p class="text-xs text-muted">Show friendly alerts inside TaskFlow for tasks due soon or overdue.</p>
+            </div>
+            <input type="checkbox" id="setting-inapp-alerts" class="form-checkbox" checked />
+          </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-due-soon-hours" class="settings-label">Due Soon Warning Window</label>
+              <p class="text-xs text-muted">How many hours before due time to show "Due Soon" badge.</p>
+            </div>
+            <div class="select-wrapper select-wrapper--compact">
+              <select id="setting-due-soon-hours" class="form-select toolbar-select" aria-label="Due soon warning window">
+                <option value="12">12 hours</option>
+                <option value="24" selected>24 hours</option>
+                <option value="48">48 hours</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <div class="settings-group">
           <div class="settings-group__header">
             <h3 class="settings-group__title">Backup & Restore</h3>
@@ -979,6 +1359,51 @@
           </div>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================
+       COMMAND PALETTE MODAL DIALOG (Cmd+K)
+       ==================================================== -->
+  <div
+    id="palette-overlay"
+    class="modal-overlay palette-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="palette-input"
+  >
+    <div class="palette-dialog">
+      <div class="palette-search-wrapper">
+        <span class="palette-search-icon" aria-hidden="true">
+          <svg class="tf-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input
+          id="palette-input"
+          type="text"
+          class="palette-input"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="true"
+          aria-controls="palette-results"
+          placeholder="Type a command or search… (e.g. Calendar, New Task, Dark Mode)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <kbd class="palette-esc-kbd" aria-hidden="true">ESC</kbd>
+      </div>
+
+      <div id="palette-results" class="palette-results" role="listbox" aria-label="Commands"></div>
+
+      <div class="palette-footer" aria-hidden="true">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span><kbd>↵</kbd> select</span>
+        <span><kbd>esc</kbd> close</span>
       </div>
     </div>
   </div>
