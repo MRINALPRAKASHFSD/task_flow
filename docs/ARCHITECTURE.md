@@ -15,12 +15,17 @@ All state is persisted in the browser's `localStorage` using a versioned schema 
 
 ```
 index.html
-└── js/app.js          (application controller & UI orchestrator)
-    ├── js/icons.js    (reusable SVG icon factory & semantic indicators)
-    ├── js/storage.js  (versioned persistence layer & migration engine)
-    ├── js/tasks.js    (domain model & entity operations — imports js/utils.js)
-    ├── js/filters.js  (multi-criteria filtering & sorting — imports js/utils.js & js/tasks.js)
-    └── js/utils.js    (date parsing, formatting & utility primitives)
+└── js/app.js          (application controller & multi-view UI orchestrator)
+    ├── js/calendar.js    (calendar engine: month/week/day grids, leap year, date queries)
+    ├── js/recurrence.js  (recurring task engine: daily, weekly, monthly, yearly rules)
+    ├── js/analytics.js   (productivity analytics: metrics, SVG trend chart, insights)
+    ├── js/reminders.js   (smart reminders: due-soon/overdue detection & notifications)
+    ├── js/palette.js     (command palette engine: fuzzy query filtering & key mapping)
+    ├── js/icons.js       (reusable SVG icon factory & semantic indicators)
+    ├── js/storage.js     (versioned persistence layer & migration engine)
+    ├── js/tasks.js       (domain model, subtasks, tags, notes & entity operations)
+    ├── js/filters.js     (multi-criteria filtering, grouping & sorting)
+    └── js/utils.js       (date parsing, formatting & utility primitives)
 
 css/styles.css         (@import css/variables.css — component architecture & SaaS styling)
 css/responsive.css     (responsive rules for 320px, 375px, 768px, 1024px, 1440px, 1920px)
@@ -62,6 +67,15 @@ Exports:
 - `deleteTask(tasks, id)` — immutably removes a task by ID.
 - `findTaskById(tasks, id)` — retrieves a task by ID.
 - `computeStats(tasks)` — computes aggregate statistics: `total`, `pending`, `completed`, `highPriority`, `completionRate`, and non-enumerable `overdue`.
+- `normaliseTags(tagsInput)`: parses and cleans tag arrays or comma-separated strings into lowercase deduplicated tokens.
+- `normaliseSubtasks(rawSubtasks)`: validates and structures checklist items `{ id, title, completed }`.
+- `normaliseNotes(notesInput)`: validates and trims multiline task notes.
+- `addSubtask(task, subtaskTitle)`: immutably appends a subtask to an existing task entity.
+- `toggleSubtask(task, subtaskId)`: immutably toggles completion status of a subtask.
+- `deleteSubtask(task, subtaskId)`: immutably removes a subtask from a task entity.
+- `getSubtaskProgress(task)`: computes `{ total, completed, percentage }` for task checklists.
+- `addTagToTask(task, tag)` / `removeTagFromTask(task, tag)`: immutably modifies task tags.
+- `getAllTags(tasks)`: extracts all unique tags present across a list of tasks.
 
 ### `js/storage.js` — Versioned Persistence Layer
 
@@ -80,22 +94,88 @@ Exports:
 - Legacy compatibility APIs: `loadTasks`, `saveTasks`, `loadTheme`, `saveTheme`, `loadFilter`, `saveFilter`.
 - `memoryStore` & `clearMemoryStore()` — test and private-mode memory fallback container.
 
-### `js/filters.js` — Multi-Criteria Filtering & Sorting
+### `js/filters.js` — Multi-Criteria Filtering, Grouping & Sorting
 
-Provides unified multi-filter evaluation and deterministic sorting.
+Provides unified multi-filter evaluation, group classification, and deterministic sorting.
 
 Exports:
 - `filterByStatus(tasks, filter, refDate)` — supports views: `'all'`, `'pending'`, `'completed'`, `'today'`, `'upcoming'`, `'overdue'`, and `'high'`.
 - `filterByCategory(tasks, category)` — filters by task category (case-insensitive).
-- `filterBySearch(tasks, query)` — debounced multi-field substring search across `title`, `description`, and `category`.
-- `sortTasks(tasks, sortBy)` — deterministic sorting options:
-  - `'default'` — pending first, priority (high → med → low), newest first.
-  - `'newest'` — newest creation date first.
-  - `'oldest'` — oldest creation date first.
-  - `'priority'` — high → medium → low, then newest creation date.
-  - `'dueDate'` — earliest due date first; tasks with due dates precede tasks without.
-  - `'updated'` — most recently updated first.
-- `applyFilters(tasks, options)` — single pipeline executing status filter, category filter, search query, and sorting.
+- `filterByTag(tasks, tag)`: filters tasks containing a specific tag token.
+- `filterBySearch(tasks, query)`: multi-field substring search across `title`, `description`, `category`, `tags`, `subtasks`, and `notes`.
+- `groupTasks(tasks, groupBy)`: groups tasks dynamically into structured buckets by `'priority'`, `'status'`, `'category'`, or `'dueDate'`.
+- `sortTasks(tasks, sortBy)`: deterministic sorting options:
+  - `'default'`: pending first, priority (high to med to low), newest first.
+  - `'newest'`: newest creation date first.
+  - `'oldest'`: oldest creation date first.
+  - `'priority'`: high to medium to low, then newest creation date.
+  - `'dueDate'`: earliest due date first; tasks with due dates precede tasks without.
+  - `'updated'`: most recently updated first.
+- `applyFilters(tasks, options)`: single pipeline executing status filter, category filter, tag filter, search query, and sorting.
+
+### `js/calendar.js`: Interactive Calendar Engine
+
+Pure zero-dependency calendar calculations, date queries, and multi-view generation (Month, Week, Day).
+
+Exports:
+- `DAYS_OF_WEEK`, `DAYS_OF_WEEK_FULL`, `MONTH_NAMES`, and `SHORT_MONTH_NAMES`: localized day and month labels.
+- `HOURS_OF_DAY`: 24 sequential hourly slots with 12-hour AM/PM labels and 24-hour format strings.
+- `formatCalendarDate(year, month, day)`: produces standardized `YYYY-MM-DD` date keys.
+- `isLeapYear(year)` and `getDaysInMonth(year, month)`: leap-year aware month length calculations.
+- `getFirstDayOfMonth(year, month)`: returns weekday index for month starting day.
+- `navigateMonth(year, month, delta)` and `navigateDay(dateInput, delta)`: safe date navigation across day, month, and year boundaries.
+- `getMonthGrid(year, month, referenceDate)`: generates complete 35- or 42-cell calendar grid with previous, current, and next month overflow.
+- `getWeekDays(dateInput, referenceDate)`: generates 7 consecutive calendar day records for week agenda.
+- `getDayAgenda(dateInput, tasks, referenceDate)`: computes full day breakdown including hourly timeline slots, all-day tasks, past overdue items, and summary counts.
+- `groupTasksByDate(tasks)`: groups tasks into a fast lookup `Map<YYYY-MM-DD, Task[]>`.
+- `getTasksForDate(tasks, dateStr)`: extracts tasks scheduled for a target date.
+- `getDayTaskSummary(tasks, referenceDate)`: computes total, pending, completed, overdue, and high-priority metrics for day badges.
+
+### `js/recurrence.js`: Recurring Task Scheduling Engine
+
+Handles periodic recurrence rules and automated occurrence generation.
+
+Exports:
+- `RECURRENCE_TYPES`: supported rules: `['none', 'daily', 'weekly', 'monthly', 'yearly']`.
+- `isValidRecurrenceRule(rule)`: validates recurrence rule schema.
+- `calculateNextDueDate(dueDate, recurrenceRule, fromDate)`: calculates the next valid calendar date with month boundary capping and leap-year safety.
+- `createRecurringTaskInstance(completedTask, nextDueDate)`: creates a clean, pending occurrence of a recurring task with reset subtasks and occurrence counter.
+- `shouldTaskRecur(task)`: verifies whether a completed task qualifies for automatic rescheduling.
+- `hasDuplicateOccurrence(tasks, originalTask, nextDueDate)`: guards against double-scheduling duplicate occurrences.
+
+### `js/analytics.js`: Productivity Analytics and Visualization
+
+Calculates real productivity metrics, trends, and renders zero-dependency SVG charts.
+
+Exports:
+- `TIME_FRAMES`: supported analytical timeframes: `['7d', '30d', '90d', 'all']`.
+- `filterTasksByTimeFrame(tasks, timeFrame, refDate)`: filters tasks by creation or completion cutoff.
+- `computeProductivityOverview(tasks, refDate)`: calculates total, completed, pending, overdue, completion rate %, and daily completion velocity.
+- `computeDailyCompletionTrends(tasks, days, refDate)`: aggregates completion counts per calendar day for trend tracking.
+- `computeCategoryAnalytics(tasks)`: computes category breakdown and completion rates.
+- `computePriorityAnalytics(tasks)`: computes priority distribution counts and percentages.
+- `computeProductivityInsights(tasks, refDate)`: derives qualitative, actionable insights based on user momentum.
+- `generateTrendChartSVG(data, options)`: generates semantic, responsive SVG bar chart markup.
+
+### `js/reminders.js`: Smart Reminders and Web Notifications
+
+Monitors deadlines and dispatches native browser and in-app notifications.
+
+Exports:
+- `DEFAULT_REMINDER_PREFERENCES`: defaults for browser notifications, in-app alerts, and due-soon hours threshold.
+- `checkSmartReminders(tasks, options)`: evaluates all tasks against current time, returning categorized reminders (`due-soon`, `overdue`, `exact-time`).
+- `dispatchBrowserNotification(reminder)`: sends native desktop notification via `Notification` API with permission checks.
+- `saveReminderPreferences(prefs)` / `loadReminderPreferences()`: persists user alert settings.
+- `isReminderAlreadyNotified(taskId, dueDate, type)` / `markReminderNotified(taskId, dueDate, type)`: deduplication registry in `localStorage`.
+
+### `js/palette.js`: Command Palette Engine
+
+Powers keyboard-first navigation and fuzzy command filtering.
+
+Exports:
+- `filterCommands(commands, query)`: ranks and filters commands across title, keywords, and category.
+- `createCommandPalette(config)`: factory returning stateful controller for query filtering, index selection, navigation (`selectNext`, `selectPrevious`), and action execution.
+- `isPaletteTriggerEvent(event)`: detects `Cmd+K` (macOS) and `Ctrl+K` (Windows/Linux) keyboard events.
 
 ### `js/utils.js` — Primitives & Date Formatting
 
