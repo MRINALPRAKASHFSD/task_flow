@@ -1,18 +1,37 @@
 /*
  * TaskFlow — responsive.css
- * Responsive Layout Adjustments & Accessibility
+ * Comprehensive Breakpoint Management & Adaptive Responsive Layouts
+ * Breakpoints covered: 320px, 375px, 768px, 1024px, 1440px, 1920px
  *
  * Copyright (c) 2026 Mrinal Prakash
  * SPDX-License-Identifier: MIT
  */
 
 /* ============================================================
-   LARGE SCREENS (>= 1280px)
+   ULTRA-WIDE & 4K SCREENS (>= 1920px)
    ============================================================ */
-@media (min-width: 1280px) {
+@media (min-width: 1920px) {
+  :root {
+    --sidebar-width: 300px;
+    --content-max-width: 1280px;
+  }
+
+  .main-inner {
+    max-width: 1280px;
+  }
+
+  .stats-grid {
+    gap: var(--space-4);
+  }
+}
+
+/* ============================================================
+   LARGE DESKTOP (>= 1440px)
+   ============================================================ */
+@media (min-width: 1440px) and (max-width: 1919px) {
   :root {
     --sidebar-width: 280px;
-    --content-max-width: 1040px;
+    --content-max-width: 1140px;
   }
 
   .header-brand__tagline {
@@ -21,7 +40,17 @@
 }
 
 /* ============================================================
-   MEDIUM-LARGE (< 1024px)
+   STANDARD DESKTOP (1024px - 1439px)
+   ============================================================ */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  :root {
+    --sidebar-width: 256px;
+    --content-max-width: 960px;
+  }
+}
+
+/* ============================================================
+   TABLET & MOBILE NAVIGATION DRAWER (< 1024px)
    ============================================================ */
 @media (max-width: 1023px) {
   .app-layout {
@@ -29,22 +58,24 @@
       "header"
       "main";
     grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr;
   }
 
   .mobile-nav-toggle {
     display: inline-flex;
   }
 
-  /* Slide-in Drawer for Sidebar */
+  /* Slide-in Mobile Drawer for Sidebar */
   .app-sidebar {
     position: fixed;
-    top: var(--header-height);
+    top: 0;
     bottom: 0;
     left: 0;
     width: 280px;
     z-index: var(--z-modal);
     transform: translateX(-100%);
     box-shadow: var(--shadow-xl);
+    padding-top: var(--space-6);
   }
 
   .app-sidebar.is-open {
@@ -55,9 +86,9 @@
     display: block;
     position: fixed;
     inset: 0;
-    top: var(--header-height);
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: calc(var(--z-modal) - 1);
     opacity: 0;
     pointer-events: none;
@@ -72,42 +103,68 @@
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .stat-card--high {
+    grid-column: span 1;
+  }
 }
 
 /* ============================================================
-   TABLET (< 768px)
+   PORTRAIT TABLET (< 768px)
    ============================================================ */
 @media (max-width: 767px) {
   :root {
     --header-height: 58px;
   }
 
-  .app-main {
-    padding: var(--space-4);
+  .app-header {
+    padding: 0 var(--space-4);
   }
 
   .header-brand__tagline {
     display: none;
   }
 
+  .header-user-chip {
+    display: none;
+  }
+
+  .app-main {
+    padding: var(--space-4);
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-3);
+    gap: var(--space-2-5);
+  }
+
+  .stat-card--high {
+    grid-column: span 2;
   }
 
   .toolbar {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-3);
+    gap: var(--space-2-5);
   }
 
   .search-box {
     min-width: 100%;
   }
 
+  .search-box__kbd {
+    display: none;
+  }
+
   .filter-tabs {
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding: 3px;
+    width: 100%;
+  }
+
+  .filter-tab {
+    flex: 1;
+    text-align: center;
   }
 
   .category-select-wrapper,
@@ -117,16 +174,25 @@
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  /* Bottom sheet modal presentation on mobile */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
   }
 
   .modal {
     max-width: 100%;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    margin-top: auto;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    border-bottom: none;
+    max-height: 85vh;
+    transform: translateY(100%);
   }
 
-  .modal-overlay {
-    align-items: flex-end;
+  .modal-overlay.is-open .modal {
+    transform: translateY(0);
   }
 
   .toast-container {
@@ -139,53 +205,60 @@
     max-width: 100%;
   }
 
+  /* Always keep task actions visible on mobile touch targets */
   .task-card__actions {
     opacity: 1;
+  }
+
+  .task-card__checkbox {
+    width: 24px;
+    height: 24px;
+  }
+
+  .task-action-btn {
+    width: 36px;
+    height: 36px;
   }
 }
 
 /* ============================================================
-   MOBILE (< 480px)
+   SMARTPHONE STANDARD (375px - 479px)
    ============================================================ */
 @media (max-width: 479px) {
   .header-brand__name {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-base);
+  }
+
+  .welcome-greeting {
+    font-size: var(--font-size-xl);
   }
 
   .section-title {
     font-size: var(--font-size-xl);
   }
 
-  .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-2);
-  }
-
   .stat-card {
     padding: var(--space-3);
-    flex-direction: column;
-    align-items: flex-start;
     gap: var(--space-2);
   }
 
   .stat-card__icon {
-    width: 32px;
-    height: 32px;
-    font-size: var(--font-size-base);
+    width: 34px;
+    height: 34px;
   }
 
-  .form-actions {
-    flex-direction: column-reverse;
-    gap: var(--space-2);
-  }
-
-  .form-actions .btn {
-    width: 100%;
+  .stat-card__value {
+    font-size: var(--font-size-xl);
   }
 
   .task-card {
     flex-wrap: wrap;
     padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .task-card__body {
+    flex: 1 1 calc(100% - 36px);
   }
 
   .task-card__date {
@@ -201,10 +274,83 @@
     padding-top: var(--space-2);
     margin-top: var(--space-2);
   }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .settings-theme-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================
-   REDUCED MOTION — Accessibility
+   SMALL SMARTPHONE SAFEGUARDS (320px - 374px)
+   ============================================================ */
+@media (max-width: 374px) {
+  :root {
+    --header-height: 54px;
+  }
+
+  .app-header {
+    padding: 0 var(--space-3);
+  }
+
+  .header-brand__name {
+    font-size: var(--font-size-sm);
+  }
+
+  .header-add-btn span {
+    display: none;
+  }
+
+  .header-add-btn {
+    padding: var(--space-1-5);
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card--high {
+    grid-column: span 1;
+  }
+
+  .filter-tabs {
+    flex-direction: column;
+  }
+
+  .modal__header,
+  .modal__body {
+    padding: var(--space-4);
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions .btn,
+  .settings-actions .file-upload-label {
+    width: 100%;
+    text-align: center;
+  }
+
+  .confirm-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-dialog__actions .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY: REDUCED MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -216,7 +362,7 @@
 }
 
 /* ============================================================
-   HIGH CONTRAST / FORCED COLORS — Accessibility
+   ACCESSIBILITY: HIGH CONTRAST / FORCED COLORS
    ============================================================ */
 @media (forced-colors: active) {
   .task-card::before {
@@ -231,7 +377,8 @@
 
   .form-input:focus,
   .form-textarea:focus,
-  .form-select:focus {
+  .form-select:focus,
+  .toolbar-select:focus {
     outline: 3px solid Highlight;
   }
 
@@ -241,7 +388,7 @@
 }
 
 /* ============================================================
-   PRINT
+   PRINT STYLES
    ============================================================ */
 @media print {
   .app-sidebar,
@@ -264,12 +411,12 @@
   }
 
   body {
-    background: white;
-    color: black;
+    background: #ffffff;
+    color: #000000;
   }
 
   .task-card {
-    border: 1px solid #ccc;
+    border: 1px solid #cccccc;
     break-inside: avoid;
     margin-bottom: 0.5rem;
     box-shadow: none;
