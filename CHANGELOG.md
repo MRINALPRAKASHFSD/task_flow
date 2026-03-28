@@ -11,6 +11,15 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Phase 3 & 3.1 Premium UI/UX Redesign, Design System & Responsive Experience**:
+  - **Design System Tokens (`css/variables.css`)**: Expanded design tokens for light and dark palettes including electric iris brand gradients, dark-mode elevated surfaces, multi-layer shadows, 4px spacing scale, and priority text/bg/border tokens.
+  - **Complete SVG Icon Factory (`js/icons.js`)**: Replaced interface emojis with a zero-dependency, accessible SVG icon factory producing consistent 16x16 and 24x24 icons across task cards, modals, sidebar, toasts, and controls.
+  - **Desktop Dashboard & Micro-Interactions (`css/styles.css`, `index.html`)**: Refined dashboard with lift animations on cards, smooth checkbox animations, custom chevron select wrappers, quick `/` search shortcut, `n`/`N` quick add shortcut, and local user chip.
+  - **Character Counters**: Added real-time character limit indicators for task title (`0/200`) and description (`0/1000`) in the task modal dialog.
+  - **Comprehensive Responsive Layout (`css/responsive.css`)**: Full coverage for 320px, 375px, 768px, 1024px, 1440px, and 1920px viewports, featuring mobile drawer navigation and bottom-sheet presentation for modals.
+  - **SVG Icon Unit Tests (`tests/icons.test.js`)**: Added automated unit test suite for the icon factory, expanding total passing test coverage to 131 tests across 29 suites.
+  - **Headless Chrome Browser Verification**: Verified across multiple viewports and captured genuine screenshots into `assets/screenshots/`.
+
 - **Phase 2.1 Security, Accessibility & Quality Hardening**:
   - **Hardened JSON Import**: `importAppStateJSON()` transactionally validates root structures, checks schema versions, detects and rejects duplicate task IDs, validates preferences, and protects existing data from being overwritten on failure.
   - **Modal Focus Management & Trapping**: Added `trapFocus` utility cycling `Tab` and `Shift + Tab` inside active modals, hierarchical `Escape` handling, and focus restoration to invoking elements upon close.

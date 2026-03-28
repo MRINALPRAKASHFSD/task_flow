@@ -16,19 +16,30 @@ All state is persisted in the browser's `localStorage` using a versioned schema 
 ```
 index.html
 └── js/app.js          (application controller & UI orchestrator)
+    ├── js/icons.js    (reusable SVG icon factory & semantic indicators)
     ├── js/storage.js  (versioned persistence layer & migration engine)
     ├── js/tasks.js    (domain model & entity operations — imports js/utils.js)
     ├── js/filters.js  (multi-criteria filtering & sorting — imports js/utils.js & js/tasks.js)
     └── js/utils.js    (date parsing, formatting & utility primitives)
 
-css/styles.css         (@import css/variables.css)
-css/responsive.css     (standalone responsive rules & media queries)
-css/variables.css      (design tokens for light & dark themes)
+css/styles.css         (@import css/variables.css — component architecture & SaaS styling)
+css/responsive.css     (responsive rules for 320px, 375px, 768px, 1024px, 1440px, 1920px)
+css/variables.css      (design system tokens for light & dark palettes)
 ```
 
 ---
 
 ## Module Responsibilities
+
+### `js/icons.js` — SVG Icon Factory & Semantic Indicators
+
+Generates standardized, accessible inline SVG elements with uniform dimensions, stroke styles, and decorative attributes:
+- `createSvg(width, height, viewBox, extraClass)` — base SVG element constructor with `aria-hidden="true"` and `.tf-icon` styling.
+- Task Action Icons: `createEditIcon()`, `createDeleteIcon()`, `createCheckIcon()`, `createPlusIcon()`.
+- Temporal & Due Date Icons: `createCalendarIcon()`, `createClockIcon()`, `createAlertIcon()`, `createFlameIcon()`.
+- Navigation & Control Icons: `createSunIcon()`, `createMoonIcon()`, `createSearchIcon()`, `createCloseIcon()`, `createSettingsIcon()`.
+- Toast & State Icons: `createToastSuccessIcon()`, `createToastErrorIcon()`, `createToastInfoIcon()`, `createEmptyClipboardIcon()`.
+- Semantic Indicators: `createPriorityDot(priority)` — renders semantic dot indicator.
 
 ### `js/tasks.js` — Domain Model & Operations
 
