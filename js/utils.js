@@ -43,6 +43,7 @@ export function formatDate(isoString) {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
     const now = new Date();
     const diffMs = now - date;
     const diffSec = Math.floor(diffMs / 1000);
@@ -60,6 +61,147 @@ export function formatDate(isoString) {
   } catch (_) {
     return '';
   }
+}
+
+/**
+ * Normalise a date input (YYYY-MM-DD or ISO string) to a Date object at local midnight.
+ *
+ * @param {string|Date} dateInput
+ * @returns {Date|null}
+ */
+export function parseLocalDate(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return null;
+    return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
+  }
+  if (typeof dateInput !== 'string') return null;
+
+  const trimmed = dateInput.trim();
+  // Check for YYYY-MM-DD
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    const d = new Date(year, month, day);
+    if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+      return d;
+    }
+  }
+
+  const parsed = new Date(trimmed);
+  if (isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+/**
+ * Validate whether a string is a valid date representation.
+ *
+ * @param {*} value
+ * @returns {boolean}
+ */
+export function isValidDateString(value) {
+  if (!value) return false;
+  return parseLocalDate(value) !== null;
+}
+
+/**
+ * Check if a date string falls on the same calendar day as the reference date.
+ *
+ * @param {string|Date} dateInput
+ * @param {Date} [referenceDate]
+ * @returns {boolean}
+ */
+export function isDateToday(dateInput, referenceDate = new Date()) {
+  const d = parseLocalDate(dateInput);
+  const ref = parseLocalDate(referenceDate);
+  if (!d || !ref) return false;
+  return d.getTime() === ref.getTime();
+}
+
+/**
+ * Check if a due date is strictly before today (overdue).
+ *
+ * @param {string|Date} dateInput
+ * @param {Date} [referenceDate]
+ * @returns {boolean}
+ */
+export function isDateOverdue(dateInput, referenceDate = new Date()) {
+  const d = parseLocalDate(dateInput);
+  const ref = parseLocalDate(referenceDate);
+  if (!d || !ref) return false;
+  return d.getTime() < ref.getTime();
+}
+
+/**
+ * Check if a due date is strictly after today (upcoming).
+ *
+ * @param {string|Date} dateInput
+ * @param {Date} [referenceDate]
+ * @returns {boolean}
+ */
+export function isDateUpcoming(dateInput, referenceDate = new Date()) {
+  const d = parseLocalDate(dateInput);
+  const ref = parseLocalDate(referenceDate);
+  if (!d || !ref) return false;
+  return d.getTime() > ref.getTime();
+}
+
+/**
+ * Format a due date for user-facing display with contextual labels.
+ *
+ * @param {string|Date} dateInput
+ * @param {Date} [referenceDate]
+ * @returns {string}
+ */
+export function formatDueDate(dateInput, referenceDate = new Date()) {
+  const d = parseLocalDate(dateInput);
+  const ref = parseLocalDate(referenceDate);
+  if (!d || !ref) return '';
+
+  const diffDays = Math.round((d.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays === -1) return 'Yesterday';
+  if (diffDays < -1) return `${Math.abs(diffDays)}d overdue`;
+  if (diffDays <= 7) return `In ${diffDays} days`;
+
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() !== ref.getFullYear() ? 'numeric' : undefined });
+}
+
+/**
+ * Format a full calendar date for the dashboard header.
+ * E.g., "Wednesday, April 30, 2026"
+ *
+ * @param {Date} [date]
+ * @returns {string}
+ */
+export function formatHeaderDate(date = new Date()) {
+  try {
+    return date.toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch (_) {
+    return '';
+  }
+}
+
+/**
+ * Return an appropriate time-of-day greeting.
+ *
+ * @param {Date} [date]
+ * @returns {string}
+ */
+export function getGreeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 /**
@@ -98,7 +240,7 @@ export function debounce(fn, delay) {
  * @returns {string}
  */
 export function normalise(str) {
-  return String(str).toLowerCase().trim();
+  return String(str || '').toLowerCase().trim();
 }
 
 /**
@@ -127,8 +269,8 @@ export function isNonEmptyString(value) {
  * Safely set the text content of a DOM element.
  *
  * @param {Element} el
- * @param {string} text
+ * @param {string|number} text
  */
 export function setText(el, text) {
-  if (el) el.textContent = String(text);
+  if (el) el.textContent = String(text ?? '');
 }
