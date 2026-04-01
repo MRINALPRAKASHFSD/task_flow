@@ -1,0 +1,61 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Coverage reports
+coverage/
+.nyc_output/
+lcov.info
+
+# Build / dist output
+dist/
+build/
+out/
+
+# OS artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Security
+*.pem
+*.key
+*.cert
+*.p12
