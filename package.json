@@ -1,0 +1,40 @@
+{
+  "name": "taskflow",
+  "version": "1.0.0",
+  "description": "TaskFlow — Plan smarter. Stay organized. Get things done. A lightweight to-do manager built with HTML5, CSS3 and Vanilla JavaScript.",
+  "keywords": [
+    "todo",
+    "task-manager",
+    "productivity",
+    "vanilla-javascript",
+    "localstorage",
+    "pwa"
+  ],
+  "author": {
+    "name": "Mrinal Prakash",
+    "url": "https://github.com/MRINALPRAKASHFSD"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/MRINALPRAKASHFSD/taskflow#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MRINALPRAKASHFSD/taskflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MRINALPRAKASHFSD/taskflow/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "node --test tests/tasks.test.js tests/filters.test.js tests/storage.test.js",
+    "test:watch": "node --test --watch tests/tasks.test.js tests/filters.test.js tests/storage.test.js",
+    "test:tasks": "node --test tests/tasks.test.js",
+    "test:filters": "node --test tests/filters.test.js",
+    "test:storage": "node --test tests/storage.test.js",
+    "lint": "echo 'No linter configured. Add ESLint for enhanced code quality.' && exit 0",
+    "start": "node -e \"const http = require('http'); const fs = require('fs'); const path = require('path'); const PORT = 8080; http.createServer((req, res) => { let fp = req.url === '/' ? './index.html' : '.' + req.url; const ext = path.extname(fp); const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript' }; try { const data = fs.readFileSync(fp); res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' }); res.end(data); } catch (e) { res.writeHead(404); res.end('Not found'); } }).listen(PORT, () => console.log('TaskFlow running on http://localhost:' + PORT));\""
+  },
+  "devDependencies": {}
+}
