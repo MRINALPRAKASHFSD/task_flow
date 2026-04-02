@@ -1,0 +1,25 @@
+TaskFlow
+Copyright (c) 2026 Mrinal Prakash
+
+--------------------------------------------------------------------------------
+NOTICE
+--------------------------------------------------------------------------------
+
+This product includes software developed by Mrinal Prakash
+(https://github.com/MRINALPRAKASHFSD).
+
+TaskFlow is an original work. The application source code is released under
+the MIT License. See the LICENSE file at the root of this repository.
+
+The documentation contained in the docs/ directory is released under the
+Creative Commons Attribution 4.0 International License (CC BY 4.0).
+See docs/LICENSE-CC-BY-4.0 for the full license text.
+
+"TaskFlow" and the TaskFlow logo/brand marks are original creative works of
+Mrinal Prakash. Use of the name "TaskFlow" or its branding in derivative
+products is permitted within the terms of the MIT License, but must not imply
+endorsement by the original author without prior written permission.
+
+Third-party dependencies, fonts, icons and assets are documented in
+docs/THIRD_PARTY_NOTICES.md, each with their respective license and
+attribution requirements.
