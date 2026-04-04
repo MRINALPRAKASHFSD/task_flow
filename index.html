@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<!--
+  TaskFlow — index.html
+  Copyright (c) 2026 Mrinal Prakash
+  SPDX-License-Identifier: MIT
+-->
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TaskFlow — Plan smarter. Stay organized. Get things done. A lightweight, privacy-respecting to-do manager." />
+  <meta name="author" content="Mrinal Prakash" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="TaskFlow — Plan smarter. Stay organized." />
+  <meta property="og:description" content="A lightweight to-do manager with priority levels, themes and search." />
+  <meta property="og:type" content="website" />
+
+  <title>TaskFlow — Plan smarter. Stay organized.</title>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+  <!-- Favicon (inline SVG data URI — no external dependency) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M8 10h16M8 16h10M8 22h12' stroke='white' stroke-width='2.5' stroke-linecap='round'/></svg>" />
+</head>
+<body>
+
+  <!-- Skip navigation link for keyboard / screen-reader users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-layout">
+
+    <!-- ====================================================
+         HEADER
+         ==================================================== -->
+    <header class="app-header" role="banner">
+      <a href="#" class="header-brand" aria-label="TaskFlow home">
+        <div class="header-brand__logo" aria-hidden="true">T</div>
+        <div>
+          <div class="header-brand__name">TaskFlow</div>
+          <div class="header-brand__tagline">Plan smarter. Stay organized.</div>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <button
+          id="theme-toggle"
+          class="theme-toggle"
+          type="button"
+          aria-label="Switch to dark theme"
+          title="Toggle theme"
+        >
+          <span id="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ====================================================
+         SIDEBAR
+         ==================================================== -->
+    <aside class="app-sidebar" aria-label="Navigation">
+      <nav>
+        <div class="sidebar-section">
+          <div class="sidebar-section__title">Views</div>
+          <ul class="sidebar-nav" role="list">
+            <li class="sidebar-nav__item">
+              <button
+                id="sidebar-all"
+                type="button"
+                class="sidebar-nav__link is-active"
+                data-filter="all"
+                aria-current="page"
+                aria-label="Show all tasks"
+              >
+                <span class="sidebar-nav__icon" aria-hidden="true">📋</span>
+                All Tasks
+                <span id="sidebar-badge-all" class="sidebar-nav__badge" aria-label="total tasks count">0</span>
+              </button>
+            </li>
+            <li class="sidebar-nav__item">
+              <button
+                id="sidebar-pending"
+                type="button"
+                class="sidebar-nav__link"
+                data-filter="pending"
+                aria-current="false"
+                aria-label="Show pending tasks"
+              >
+                <span class="sidebar-nav__icon" aria-hidden="true">⏳</span>
+                Pending
+                <span id="sidebar-badge-pending" class="sidebar-nav__badge" aria-label="pending tasks count">0</span>
+              </button>
+            </li>
+            <li class="sidebar-nav__item">
+              <button
+                id="sidebar-completed"
+                type="button"
+                class="sidebar-nav__link"
+                data-filter="completed"
+                aria-current="false"
+                aria-label="Show completed tasks"
+              >
+                <span class="sidebar-nav__icon" aria-hidden="true">✅</span>
+                Completed
+                <span id="sidebar-badge-completed" class="sidebar-nav__badge" aria-label="completed tasks count">0</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ====================================================
+         MAIN CONTENT
+         ==================================================== -->
+    <main id="main-content" class="app-main" role="main">
+      <div class="main-inner">
+
+        <!-- Page heading -->
+        <h1 class="section-title">My Tasks</h1>
+        <p class="section-subtitle">Manage your work and stay on top of your priorities.</p>
+
+        <!-- ─── Dashboard Statistics ─── -->
+        <section aria-label="Task statistics">
+          <div class="stats-grid">
+
+            <div class="stat-card stat-card--total" role="region" aria-label="Total tasks">
+              <div class="stat-card__icon" aria-hidden="true">📋</div>
+              <div class="stat-card__body">
+                <div id="stat-total" class="stat-card__value" aria-live="polite">0</div>
+                <div class="stat-card__label">Total Tasks</div>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--pending" role="region" aria-label="Pending tasks">
+              <div class="stat-card__icon" aria-hidden="true">⏳</div>
+              <div class="stat-card__body">
+                <div id="stat-pending" class="stat-card__value" aria-live="polite">0</div>
+                <div class="stat-card__label">Pending</div>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--completed" role="region" aria-label="Completed tasks">
+              <div class="stat-card__icon" aria-hidden="true">✅</div>
+              <div class="stat-card__body">
+                <div id="stat-completed" class="stat-card__value" aria-live="polite">0</div>
+                <div class="stat-card__label">Completed</div>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--high" role="region" aria-label="High priority pending tasks">
+              <div class="stat-card__icon" aria-hidden="true">🔴</div>
+              <div class="stat-card__body">
+                <div id="stat-high-priority" class="stat-card__value" aria-live="polite">0</div>
+                <div class="stat-card__label">High Priority</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Completion progress -->
+          <div style="margin-bottom: var(--space-8);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);">
+              <span style="font-size:var(--font-size-sm);font-weight:var(--font-weight-medium);color:var(--color-text-secondary);">Completion Progress</span>
+              <span id="progress-label" style="font-size:var(--font-size-xs);color:var(--color-text-muted);">0% complete</span>
+            </div>
+            <div
+              class="progress-bar"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              aria-label="Task completion progress"
+            >
+              <div id="progress-fill" class="progress-bar__fill" style="width:0%;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── Toolbar (search + filter + add) ─── -->
+        <div class="toolbar" role="search" aria-label="Search and filter tasks">
+
+          <div class="search-box">
+            <span class="search-box__icon" aria-hidden="true">🔍</span>
+            <label for="search-input" class="sr-only">Search tasks</label>
+            <input
+              id="search-input"
+              type="search"
+              class="search-box__input"
+              placeholder="Search tasks…"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Search tasks by title or description"
+            />
+          </div>
+
+          <div class="filter-tabs" role="group" aria-label="Filter tasks by status">
+            <button type="button" class="filter-tab is-active" data-filter="all"       aria-pressed="true">All</button>
+            <button type="button" class="filter-tab"           data-filter="pending"   aria-pressed="false">Pending</button>
+            <button type="button" class="filter-tab"           data-filter="completed" aria-pressed="false">Completed</button>
+          </div>
+
+          <button id="btn-add-task" type="button" class="btn btn-primary" aria-label="Add new task">
+            <span aria-hidden="true">+</span> Add Task
+          </button>
+
+        </div>
+
+        <!-- ─── Task List ─── -->
+        <section aria-label="Task list">
+          <div class="task-list__header">
+            <h2 class="task-list__title">Tasks</h2>
+            <span id="task-count" class="task-list__count" aria-live="polite" aria-atomic="true">0 tasks</span>
+          </div>
+
+          <!-- Empty state -->
+          <div
+            id="empty-state"
+            class="empty-state"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <span class="empty-state__icon" aria-hidden="true">📭</span>
+            <h2 class="empty-state__title">No tasks yet</h2>
+            <p class="empty-state__description">
+              Add your first task to get started. Stay organised and productive!
+            </p>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-add-task').click()">
+              Add your first task
+            </button>
+          </div>
+
+          <!-- Task cards container -->
+          <div
+            id="task-list"
+            class="task-list"
+            role="list"
+            aria-label="Tasks"
+            aria-live="polite"
+            aria-relevant="additions removals"
+          >
+            <!-- Task cards are rendered here by app.js -->
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div><!-- /.app-layout -->
+
+
+  <!-- ====================================================
+       ADD / EDIT TASK MODAL
+       ==================================================== -->
+  <div
+    id="modal-overlay"
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="modal-title"
+  >
+    <div class="modal">
+      <div class="modal__header">
+        <h2 id="modal-title" class="modal__title">Add New Task</h2>
+        <button
+          id="modal-close"
+          type="button"
+          class="modal__close"
+          aria-label="Close dialog"
+        >✕</button>
+      </div>
+
+      <div class="modal__body">
+        <form id="task-form" novalidate>
+
+          <!-- Title -->
+          <div class="form-group">
+            <label for="field-title" class="form-label form-label--required">
+              Task Title
+            </label>
+            <input
+              id="field-title"
+              type="text"
+              class="form-input"
+              placeholder="What needs to be done?"
+              maxlength="200"
+              required
+              autocomplete="off"
+              aria-describedby="error-title"
+              aria-required="true"
+              aria-invalid="false"
+            />
+            <span id="error-title" class="form-error" role="alert" aria-live="assertive"></span>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="field-description" class="form-label">
+              Description <span class="text-muted text-sm">(optional)</span>
+            </label>
+            <textarea
+              id="field-description"
+              class="form-textarea"
+              placeholder="Add more details about this task…"
+              maxlength="1000"
+              rows="3"
+              aria-describedby="error-description"
+              aria-invalid="false"
+            ></textarea>
+            <span id="error-description" class="form-error" role="alert" aria-live="assertive"></span>
+          </div>
+
+          <!-- Priority -->
+          <div class="form-group">
+            <label for="field-priority" class="form-label">
+              Priority
+            </label>
+            <select id="field-priority" class="form-select" aria-label="Select task priority">
+              <option value="low">🟢 Low</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <button id="btn-cancel" type="button" class="btn btn-secondary">Cancel</button>
+            <button id="btn-submit" type="submit" class="btn btn-primary">Save Task</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================
+       DELETE CONFIRMATION MODAL
+       ==================================================== -->
+  <div
+    id="confirm-overlay"
+    class="modal-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="confirm-dialog-title"
+    aria-describedby="confirm-message"
+  >
+    <div class="modal" style="max-width:420px;">
+      <div class="modal__header">
+        <h2 id="confirm-dialog-title" class="modal__title">Confirm Delete</h2>
+      </div>
+      <div class="modal__body">
+        <p id="confirm-message" class="confirm-dialog__message"></p>
+        <div class="confirm-dialog__actions">
+          <button id="btn-confirm-cancel" type="button" class="btn btn-secondary">Cancel</button>
+          <button id="btn-confirm-ok"     type="button" class="btn btn-danger"    style="background:var(--color-danger);color:#fff;border-color:var(--color-danger);">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================
+       TOAST NOTIFICATION CONTAINER
+       ==================================================== -->
+  <div
+    id="toast-container"
+    class="toast-container"
+    aria-live="polite"
+    aria-atomic="false"
+    role="region"
+    aria-label="Notifications"
+  ></div>
+
+
+  <!-- Application entry point (ES module) -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
