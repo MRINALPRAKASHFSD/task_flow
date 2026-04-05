@@ -1,6 +1,6 @@
 /**
  * TaskFlow — storage.js
- * LocalStorage abstraction layer.
+ * LocalStorage abstraction layer with schema versioning, validation and error handling.
  *
  * Copyright (c) 2026 Mrinal Prakash
  * SPDX-License-Identifier: MIT
@@ -8,14 +8,94 @@
 
 'use strict';
 
-const STORAGE_KEYS = {
-  TASKS: 'taskflow_tasks',
-  THEME: 'taskflow_theme',
-  FILTER: 'taskflow_filter',
+import { PRIORITIES } from './tasks.js';
+
+export const CURRENT_SCHEMA_VERSION = 1;
+
+export const STORAGE_KEYS = {
+  TASKS:   'taskflow_tasks',
+  THEME:   'taskflow_theme',
+  FILTER:  'taskflow_filter',
+  DATA:    'taskflow_data',
 };
 
+// In-memory fallback storage used ONLY when localStorage is unavailable or throws errors
+const memoryStore = new Map();
+
 /**
- * Safely read a JSON value from localStorage.
+ * Check whether localStorage is available and functional.
+ *
+ * @returns {boolean}
+ */
+export function storageAvailable() {
+  const probe = '__taskflow_probe__';
+  try {
+    if (typeof localStorage === 'undefined' || localStorage === null) return false;
+    localStorage.setItem(probe, '1');
+    localStorage.removeItem(probe);
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
+/**
+ * Safely read a string value from storage.
+ *
+ * @param {string} key
+ * @returns {string|null}
+ */
+function rawGet(key) {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage !== null) {
+      return localStorage.getItem(key);
+    }
+  } catch (_e) {
+    // localStorage access blocked / unavailable; fall back to memoryStore
+  }
+  return memoryStore.has(key) ? memoryStore.get(key) : null;
+}
+
+/**
+ * Safely write a string value to storage.
+ *
+ * @param {string} key
+ * @param {string} value
+ * @returns {boolean}
+ */
+function rawSet(key, value) {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage !== null) {
+      localStorage.setItem(key, value);
+      return true;
+    }
+  } catch (err) {
+    console.warn('[TaskFlow] localStorage write failed, using in-memory store:', err.message);
+  }
+  memoryStore.set(key, value);
+  return true;
+}
+
+/**
+ * Safely remove a key from storage.
+ *
+ * @param {string} key
+ * @returns {boolean}
+ */
+function rawRemove(key) {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage !== null) {
+      localStorage.removeItem(key);
+    }
+  } catch (_e) {
+    // ignore
+  }
+  memoryStore.delete(key);
+  return true;
+}
+
+/**
+ * Safely read a JSON value from storage.
  * Returns `defaultValue` on any error (missing key, parse error, unavailable storage).
  *
  * @param {string} key
@@ -23,9 +103,9 @@ const STORAGE_KEYS = {
  * @returns {*}
  */
 function storageGet(key, defaultValue = null) {
+  const raw = rawGet(key);
+  if (raw === null || raw === undefined) return defaultValue;
   try {
-    const raw = localStorage.getItem(key);
-    if (raw === null) return defaultValue;
     return JSON.parse(raw);
   } catch (_err) {
     return defaultValue;
@@ -33,8 +113,7 @@ function storageGet(key, defaultValue = null) {
 }
 
 /**
- * Safely write a JSON value to localStorage.
- * Returns `true` on success, `false` on failure (quota exceeded, unavailable).
+ * Safely write a JSON value to storage.
  *
  * @param {string} key
  * @param {*} value
@@ -42,8 +121,7 @@ function storageGet(key, defaultValue = null) {
  */
 function storageSet(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
+    return rawSet(key, JSON.stringify(value));
   } catch (err) {
     console.error('[TaskFlow] Failed to write to localStorage:', err);
     return false;
@@ -57,29 +135,145 @@ function storageSet(key, value) {
  * @returns {boolean}
  */
 function storageRemove(key) {
-  try {
-    localStorage.removeItem(key);
-    return true;
-  } catch (err) {
-    console.error('[TaskFlow] Failed to remove from localStorage:', err);
-    return false;
+  return rawRemove(key);
+}
+
+// ─── Task Validation and Cleansing ────────────────────────────────────────────
+
+/**
+ * Validate and cleanse a single loaded task record to ensure data integrity.
+ *
+ * @param {*} raw
+ * @returns {import('./tasks.js').Task|null}
+ */
+export function validateTaskRecord(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if (!raw.id || typeof raw.id !== 'string') return null;
+  if (!raw.title || typeof raw.title !== 'string') return null;
+
+  const title = raw.title.trim().slice(0, 200);
+  if (!title) return null;
+
+  const description = typeof raw.description === 'string' ? raw.description.trim().slice(0, 1000) : '';
+  const priority = PRIORITIES.includes(raw.priority) ? raw.priority : 'medium';
+  const category = typeof raw.category === 'string' && raw.category.trim() ? raw.category.trim().slice(0, 50) : 'General';
+
+  const isCompleted = raw.completed === true || raw.status === 'completed';
+  const status = isCompleted ? 'completed' : 'pending';
+  const completed = isCompleted;
+
+  let dueDate = null;
+  if (typeof raw.dueDate === 'string' && raw.dueDate.trim()) {
+    dueDate = raw.dueDate.trim();
   }
+
+  const createdAt = typeof raw.createdAt === 'string' && raw.createdAt ? raw.createdAt : new Date().toISOString();
+  const updatedAt = typeof raw.updatedAt === 'string' && raw.updatedAt ? raw.updatedAt : createdAt;
+
+  return {
+    id: String(raw.id),
+    title,
+    description,
+    priority,
+    category,
+    status,
+    completed,
+    dueDate,
+    createdAt,
+    updatedAt,
+  };
 }
 
 /**
- * Check whether localStorage is available and functional.
+ * Cleanse an array of task records.
  *
+ * @param {Array} list
+ * @returns {import('./tasks.js').Task[]}
+ */
+export function cleanseTaskList(list) {
+  if (!Array.isArray(list)) return [];
+  const valid = [];
+  for (const item of list) {
+    const cleansed = validateTaskRecord(item);
+    if (cleansed) valid.push(cleansed);
+  }
+  return valid;
+}
+
+// ─── Versioned App State ──────────────────────────────────────────────────────
+
+/**
+ * Load the full versioned application state.
+ * Automatically migrates unversioned data if present.
+ *
+ * @returns {{ version: number, tasks: import('./tasks.js').Task[], preferences: { theme: 'light'|'dark', filter: string, sortBy: string, category: string } }}
+ */
+export function loadAppState() {
+  const versioned = storageGet(STORAGE_KEYS.DATA, null);
+
+  if (versioned && typeof versioned === 'object' && Array.isArray(versioned.tasks)) {
+    return {
+      version: versioned.version || CURRENT_SCHEMA_VERSION,
+      tasks: cleanseTaskList(versioned.tasks),
+      preferences: {
+        theme: versioned.preferences?.theme === 'dark' ? 'dark' : 'light',
+        filter: versioned.preferences?.filter || 'all',
+        sortBy: versioned.preferences?.sortBy || 'newest',
+        category: versioned.preferences?.category || 'all',
+      },
+    };
+  }
+
+  // Fallback to legacy unversioned tasks and theme keys
+  const legacyTasksRaw = storageGet(STORAGE_KEYS.TASKS, []);
+  const legacyTasks = Array.isArray(legacyTasksRaw) ? cleanseTaskList(legacyTasksRaw) : [];
+  const legacyTheme = loadTheme();
+  const legacyFilter = loadFilter();
+
+  const state = {
+    version: CURRENT_SCHEMA_VERSION,
+    tasks: legacyTasks,
+    preferences: {
+      theme: legacyTheme,
+      filter: legacyFilter,
+      sortBy: 'newest',
+      category: 'all',
+    },
+  };
+
+  // If legacy tasks were found, save to versioned store
+  if (legacyTasks.length > 0) {
+    saveAppState(state);
+  }
+
+  return state;
+}
+
+/**
+ * Persist the full versioned application state to storage.
+ *
+ * @param {{ version?: number, tasks: import('./tasks.js').Task[], preferences?: Object }} state
  * @returns {boolean}
  */
-function storageAvailable() {
-  const probe = '__taskflow_probe__';
-  try {
-    localStorage.setItem(probe, '1');
-    localStorage.removeItem(probe);
-    return true;
-  } catch (_err) {
-    return false;
-  }
+export function saveAppState(state) {
+  const payload = {
+    version: CURRENT_SCHEMA_VERSION,
+    tasks: Array.isArray(state?.tasks) ? state.tasks : [],
+    preferences: {
+      theme: state?.preferences?.theme === 'dark' ? 'dark' : 'light',
+      filter: state?.preferences?.filter || 'all',
+      sortBy: state?.preferences?.sortBy || 'newest',
+      category: state?.preferences?.category || 'all',
+    },
+  };
+
+  const success = storageSet(STORAGE_KEYS.DATA, payload);
+  // Also keep legacy keys in sync for backward compatibility
+  storageSet(STORAGE_KEYS.TASKS, payload.tasks);
+  storageSet(STORAGE_KEYS.THEME, payload.preferences.theme);
+  storageSet(STORAGE_KEYS.FILTER, payload.preferences.filter);
+
+  return success;
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -90,9 +284,19 @@ function storageAvailable() {
  * @returns {import('./tasks.js').Task[]}
  */
 export function loadTasks() {
-  const tasks = storageGet(STORAGE_KEYS.TASKS, []);
-  if (!Array.isArray(tasks)) return [];
-  return tasks;
+  const tasks = storageGet(STORAGE_KEYS.TASKS, null);
+  if (tasks !== null) {
+    if (!Array.isArray(tasks)) return [];
+    return tasks;
+  }
+
+  // If TASKS key is not set, check DATA key
+  const versioned = storageGet(STORAGE_KEYS.DATA, null);
+  if (versioned && typeof versioned === 'object' && Array.isArray(versioned.tasks)) {
+    return versioned.tasks;
+  }
+
+  return [];
 }
 
 /**
@@ -102,7 +306,23 @@ export function loadTasks() {
  * @returns {boolean} Whether the save succeeded.
  */
 export function saveTasks(tasks) {
-  return storageSet(STORAGE_KEYS.TASKS, tasks);
+  const success = storageSet(STORAGE_KEYS.TASKS, tasks);
+
+  // Keep versioned data in sync if available
+  const existing = storageGet(STORAGE_KEYS.DATA, null);
+  const versionedPayload = {
+    version: CURRENT_SCHEMA_VERSION,
+    tasks: Array.isArray(tasks) ? tasks : [],
+    preferences: existing?.preferences || {
+      theme: loadTheme(),
+      filter: loadFilter(),
+      sortBy: 'newest',
+      category: 'all',
+    },
+  };
+  storageSet(STORAGE_KEYS.DATA, versionedPayload);
+
+  return success;
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -116,7 +336,7 @@ export function loadTheme() {
   const saved = storageGet(STORAGE_KEYS.THEME, null);
   if (saved === 'dark' || saved === 'light') return saved;
   // Respect OS preference on first visit
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     return 'dark';
   }
   return 'light';
@@ -137,23 +357,26 @@ export function saveTheme(theme) {
 /**
  * Load the last-used filter.
  *
- * @returns {'all'|'pending'|'completed'}
+ * @returns {'all'|'pending'|'completed'|'today'|'upcoming'|'overdue'|'high'}
  */
 export function loadFilter() {
   const saved = storageGet(STORAGE_KEYS.FILTER, 'all');
-  return ['all', 'pending', 'completed'].includes(saved) ? saved : 'all';
+  const validFilters = ['all', 'pending', 'completed', 'today', 'upcoming', 'overdue', 'high'];
+  return validFilters.includes(saved) ? saved : 'all';
 }
 
 /**
  * Persist the active filter.
  *
- * @param {'all'|'pending'|'completed'} filter
+ * @param {string} filter
  * @returns {boolean}
  */
 export function saveFilter(filter) {
   return storageSet(STORAGE_KEYS.FILTER, filter);
 }
 
-// ─── Storage availability check ───────────────────────────────────────────────
+// ─── Memory Store Clear ───────────────────────────────────────────────────────
 
-export { storageAvailable, STORAGE_KEYS };
+export function clearMemoryStore() {
+  memoryStore.clear();
+}
