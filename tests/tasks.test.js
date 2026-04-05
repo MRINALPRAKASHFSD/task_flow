@@ -15,9 +15,16 @@ import assert from 'node:assert/strict';
 
 // ─── Import the module under test ──────────────────────────────────────────
 import {
+  CATEGORIES,
+  PRIORITIES,
   createTask,
   updateTask,
   toggleTaskStatus,
+  reopenTask,
+  completeTask,
+  isTaskOverdue,
+  isTaskDueToday,
+  isTaskUpcoming,
   validateTaskInput,
   addTask,
   replaceTask,
@@ -341,5 +348,148 @@ describe('computeStats', () => {
     const done = [toggleTaskStatus(tasks[0])];
     const stats = computeStats(done);
     assert.equal(stats.completionRate, 100);
+  });
+
+  test('tracks overdue pending tasks in stats.overdue', () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 2);
+    const pad = n => String(n).padStart(2, '0');
+    const pastStr = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
+
+    const overdueTask = createTask({ title: 'Late task', dueDate: pastStr });
+    const completedOverdue = toggleTaskStatus(createTask({ title: 'Late but done', dueDate: pastStr }));
+    const onTimeTask = createTask({ title: 'No due date' });
+
+    const stats = computeStats([overdueTask, completedOverdue, onTimeTask]);
+    assert.equal(stats.overdue, 1, 'Only pending overdue tasks should be counted');
+  });
+});
+
+// ─── Phase 2: Extended Task Capabilities ─────────────────────────────────────
+
+describe('createTask — Phase 2 fields', () => {
+  test('sets category to General by default and synchronizes completed boolean', () => {
+    const task = createTask({ title: 'Default category test' });
+    assert.equal(task.category, 'General');
+    assert.equal(task.completed, false);
+    assert.equal(task.dueDate, null);
+  });
+
+  test('accepts valid category options', () => {
+    CATEGORIES.forEach(cat => {
+      const task = createTask({ title: `Category test ${cat}`, category: cat });
+      assert.equal(task.category, cat);
+    });
+  });
+
+  test('normalises unknown category to General', () => {
+    const task = createTask({ title: 'Random category', category: 'SecretMission' });
+    assert.equal(task.category, 'General');
+  });
+
+  test('accepts valid YYYY-MM-DD due date and trims input', () => {
+    const task = createTask({ title: 'Due date test', dueDate: '2026-12-31' });
+    assert.equal(task.dueDate, '2026-12-31');
+  });
+
+  test('rejects malformed due dates', () => {
+    assert.throws(
+      () => createTask({ title: 'Bad date', dueDate: '31-12-2026' }),
+      /valid YYYY-MM-DD/
+    );
+    assert.throws(
+      () => createTask({ title: 'Bad date 2', dueDate: 'invalid-date' }),
+      /valid YYYY-MM-DD/
+    );
+  });
+});
+
+describe('updateTask — Phase 2 fields', () => {
+  test('updates category and dueDate successfully', () => {
+    const original = createTask({ title: 'Initial task' });
+    const updated = updateTask(original, {
+      category: 'Work',
+      dueDate: '2026-08-15',
+    });
+
+    assert.equal(updated.category, 'Work');
+    assert.equal(updated.dueDate, '2026-08-15');
+    assert.equal(updated.id, original.id);
+  });
+
+  test('can clear dueDate by setting it to empty string or null', () => {
+    const original = createTask({ title: 'With date', dueDate: '2026-08-15' });
+    const cleared = updateTask(original, { dueDate: '' });
+    assert.equal(cleared.dueDate, null);
+  });
+
+  test('keeps completed boolean in sync when status is changed via updateTask', () => {
+    const task = createTask({ title: 'Status sync test' });
+    const completed = updateTask(task, { status: 'completed' });
+    assert.equal(completed.status, 'completed');
+    assert.equal(completed.completed, true);
+
+    const pendingAgain = updateTask(completed, { status: 'pending' });
+    assert.equal(pendingAgain.status, 'pending');
+    assert.equal(pendingAgain.completed, false);
+  });
+});
+
+describe('reopenTask & completeTask', () => {
+  test('completeTask sets status to completed and completed to true', () => {
+    const task = createTask({ title: 'To finish' });
+    const finished = completeTask(task);
+    assert.equal(finished.status, 'completed');
+    assert.equal(finished.completed, true);
+  });
+
+  test('reopenTask sets status to pending and completed to false', () => {
+    const task = createTask({ title: 'To finish' });
+    const finished = completeTask(task);
+    const reopened = reopenTask(finished);
+    assert.equal(reopened.status, 'pending');
+    assert.equal(reopened.completed, false);
+  });
+});
+
+describe('Date Status Checkers', () => {
+  const pad = n => String(n).padStart(2, '0');
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  const pastDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3);
+  const pastStr = `${pastDate.getFullYear()}-${pad(pastDate.getMonth() + 1)}-${pad(pastDate.getDate())}`;
+
+  const futureDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
+  const futureStr = `${futureDate.getFullYear()}-${pad(futureDate.getMonth() + 1)}-${pad(futureDate.getDate())}`;
+
+  test('isTaskDueToday correctly detects tasks due today', () => {
+    const todayTask = createTask({ title: 'Today', dueDate: todayStr });
+    const futureTask = createTask({ title: 'Future', dueDate: futureStr });
+    const noDate = createTask({ title: 'No date' });
+
+    assert.equal(isTaskDueToday(todayTask), true);
+    assert.equal(isTaskDueToday(futureTask), false);
+    assert.equal(isTaskDueToday(noDate), false);
+  });
+
+  test('isTaskOverdue returns true only for pending tasks with past dates', () => {
+    const overduePending = createTask({ title: 'Late', dueDate: pastStr });
+    const overdueCompleted = completeTask(createTask({ title: 'Late done', dueDate: pastStr }));
+    const todayTask = createTask({ title: 'Today', dueDate: todayStr });
+
+    assert.equal(isTaskOverdue(overduePending), true);
+    assert.equal(isTaskOverdue(overdueCompleted), false, 'Completed tasks are not overdue');
+    assert.equal(isTaskOverdue(todayTask), false, 'Today is not overdue');
+  });
+
+  test('isTaskUpcoming returns true for future tasks that are not completed', () => {
+    const futurePending = createTask({ title: 'Future task', dueDate: futureStr });
+    const futureDone = completeTask(createTask({ title: 'Future done', dueDate: futureStr }));
+    const todayTask = createTask({ title: 'Today', dueDate: todayStr });
+
+    assert.equal(isTaskUpcoming(futurePending), true);
+    assert.equal(isTaskUpcoming(futureDone), false);
+    assert.equal(isTaskUpcoming(todayTask), false);
   });
 });
