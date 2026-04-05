@@ -40,6 +40,12 @@ const {
   loadFilter, saveFilter,
   storageAvailable,
   STORAGE_KEYS,
+  CURRENT_SCHEMA_VERSION,
+  loadAppState,
+  saveAppState,
+  validateTaskRecord,
+  cleanseTaskList,
+  clearMemoryStore,
 } = await import('../js/storage.js');
 
 // ─── storageAvailable ──────────────────────────────────────────────────────
@@ -139,5 +145,118 @@ describe('loadFilter / saveFilter', () => {
 
   test('saveFilter returns true on success', () => {
     assert.equal(saveFilter('all'), true);
+  });
+});
+
+// ─── Versioned App State (Phase 2) ───────────────────────────────────────────
+
+describe('CURRENT_SCHEMA_VERSION', () => {
+  test('is schema version 1', () => {
+    assert.equal(CURRENT_SCHEMA_VERSION, 1);
+  });
+});
+
+describe('validateTaskRecord', () => {
+  test('returns cleansed task object for a fully formed task', () => {
+    const valid = validateTaskRecord({
+      id: 'abc-123',
+      title: 'Valid Task',
+      status: 'pending',
+      priority: 'high',
+      category: 'Work',
+      completed: false,
+    });
+    assert.ok(valid);
+    assert.equal(valid.id, 'abc-123');
+    assert.equal(valid.title, 'Valid Task');
+    assert.equal(valid.category, 'Work');
+  });
+
+  test('returns null for null or non-objects', () => {
+    assert.equal(validateTaskRecord(null), null);
+    assert.equal(validateTaskRecord('string'), null);
+    assert.equal(validateTaskRecord(123), null);
+  });
+
+  test('returns null for object missing title', () => {
+    assert.equal(validateTaskRecord({ id: '1', status: 'pending' }), null);
+  });
+});
+
+describe('cleanseTaskList', () => {
+  test('preserves valid tasks and populates missing default attributes', () => {
+    const raw = [
+      { id: '1', title: 'Task 1', status: 'pending', priority: 'medium' },
+      { id: '2', title: 'Task 2', status: 'completed', priority: 'high', category: 'Study' },
+      null,
+      'invalid',
+      { id: '3' }, // missing title
+    ];
+
+    const cleansed = cleanseTaskList(raw);
+    assert.equal(cleansed.length, 2);
+    assert.equal(cleansed[0].category, 'General');
+    assert.equal(cleansed[0].completed, false);
+    assert.equal(cleansed[1].category, 'Study');
+    assert.equal(cleansed[1].completed, true);
+  });
+});
+
+describe('loadAppState / saveAppState', () => {
+  beforeEach(() => {
+    stubStorage.clear();
+    clearMemoryStore();
+  });
+
+  test('loadAppState returns default state when nothing is stored', () => {
+    const state = loadAppState();
+    assert.equal(state.version, 1);
+    assert.deepEqual(state.tasks, []);
+    assert.equal(state.preferences.theme, 'light');
+    assert.equal(state.preferences.filter, 'all');
+    assert.equal(state.preferences.sortBy, 'newest');
+    assert.equal(state.preferences.category, 'all');
+  });
+
+  test('saveAppState persists state and loadAppState retrieves it', () => {
+    const payload = {
+      version: 1,
+      tasks: [{ id: '1', title: 'State task', status: 'pending', priority: 'low', category: 'Work', completed: false, dueDate: null }],
+      preferences: { theme: 'dark', filter: 'today', sortBy: 'priority', category: 'Work' },
+    };
+
+    const saved = saveAppState(payload);
+    assert.equal(saved, true);
+
+    const loaded = loadAppState();
+    assert.equal(loaded.version, 1);
+    assert.equal(loaded.tasks.length, 1);
+    assert.equal(loaded.tasks[0].title, 'State task');
+    assert.equal(loaded.preferences.theme, 'dark');
+    assert.equal(loaded.preferences.filter, 'today');
+    assert.equal(loaded.preferences.sortBy, 'priority');
+    assert.equal(loaded.preferences.category, 'Work');
+  });
+
+  test('loadAppState falls back to legacy keys if taskflow_data is absent', () => {
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify([
+      { id: 'leg-1', title: 'Legacy Task', status: 'pending', priority: 'high' }
+    ]));
+    localStorage.setItem(STORAGE_KEYS.THEME, JSON.stringify('dark'));
+    localStorage.setItem(STORAGE_KEYS.FILTER, JSON.stringify('completed'));
+
+    const state = loadAppState();
+    assert.equal(state.tasks.length, 1);
+    assert.equal(state.tasks[0].title, 'Legacy Task');
+    assert.equal(state.tasks[0].category, 'General');
+    assert.equal(state.preferences.theme, 'dark');
+    assert.equal(state.preferences.filter, 'completed');
+  });
+
+  test('loadAppState handles corrupt JSON safely', () => {
+    localStorage.setItem(STORAGE_KEYS.APP_STATE, '{not-valid-json');
+    const state = loadAppState();
+    assert.equal(state.version, 1);
+    assert.deepEqual(state.tasks, []);
   });
 });
