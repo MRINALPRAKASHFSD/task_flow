@@ -1,0 +1,223 @@
+/*
+ * TaskFlow — responsive.css
+ * Responsive Layout Adjustments
+ *
+ * Copyright (c) 2026 Mrinal Prakash
+ * SPDX-License-Identifier: MIT
+ */
+
+/* ============================================================
+   LARGE SCREENS (>= 1280px)
+   ============================================================ */
+@media (min-width: 1280px) {
+  .header-brand__tagline {
+    display: block;
+  }
+
+  :root {
+    --sidebar-width: 280px;
+  }
+}
+
+/* ============================================================
+   MEDIUM-LARGE (< 1024px) — collapse sidebar
+   ============================================================ */
+@media (max-width: 1023px) {
+  .app-layout {
+    grid-template-areas:
+      "header header"
+      "main   main";
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    display: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================================
+   TABLET (< 768px)
+   ============================================================ */
+@media (max-width: 767px) {
+  :root {
+    --header-height: 56px;
+  }
+
+  .app-main {
+    padding: var(--space-4);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    min-width: unset;
+  }
+
+  .filter-tabs {
+    justify-content: center;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin-top: auto;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .toast-container {
+    bottom: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  .task-card__actions {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   MOBILE (< 480px)
+   ============================================================ */
+@media (max-width: 479px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat-card {
+    padding: var(--space-4);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .stat-card__icon {
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-base);
+  }
+
+  .header-brand__name {
+    font-size: var(--font-size-lg);
+  }
+
+  .section-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .task-form-card {
+    padding: var(--space-4);
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .task-card {
+    flex-wrap: wrap;
+  }
+
+  .task-card__actions {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+    margin-top: var(--space-2);
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   HIGH CONTRAST
+   ============================================================ */
+@media (forced-colors: active) {
+  .task-card::before {
+    forced-color-adjust: none;
+  }
+
+  .btn-primary {
+    forced-color-adjust: none;
+    background-color: ButtonText;
+    color: ButtonFace;
+  }
+
+  .form-input:focus,
+  .form-textarea:focus,
+  .form-select:focus {
+    outline: 3px solid Highlight;
+  }
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print {
+  .app-sidebar,
+  .app-header,
+  .toolbar,
+  .task-card__actions,
+  .btn,
+  .toast-container,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  .app-layout {
+    display: block;
+  }
+
+  .app-main {
+    padding: 0;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .task-card {
+    border: 1px solid #ccc;
+    break-inside: avoid;
+    margin-bottom: 0.5rem;
+    box-shadow: none;
+  }
+}
