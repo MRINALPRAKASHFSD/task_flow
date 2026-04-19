@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 
 import {
   filterByStatus,
+  filterByCategory,
   filterBySearch,
   applyFilters,
   sortTasks,
@@ -74,6 +75,67 @@ describe('filterByStatus', () => {
     const result = filterByStatus([t1], 'unknown');
     assert.equal(result.length, 1);
   });
+
+  test('"today" returns tasks due today', () => {
+    const pad = n => String(n).padStart(2, '0');
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const tToday = makeTask({ title: 'Today Task', dueDate: todayStr });
+    const tFuture = makeTask({ title: 'Future Task', dueDate: '2099-01-01' });
+    const result = filterByStatus([tToday, tFuture], 'today');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Today Task');
+  });
+
+  test('"upcoming" returns future pending tasks', () => {
+    const tFuture = makeTask({ title: 'Upcoming Task', dueDate: '2099-01-01' });
+    const tDone = makeCompleted(makeTask({ title: 'Done Task', dueDate: '2099-01-01' }));
+    const result = filterByStatus([tFuture, tDone], 'upcoming');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Upcoming Task');
+  });
+
+  test('"overdue" returns only overdue pending tasks', () => {
+    const tLate = makeTask({ title: 'Late Task', dueDate: '2020-01-01' });
+    const tLateDone = makeCompleted(makeTask({ title: 'Late Done', dueDate: '2020-01-01' }));
+    const result = filterByStatus([tLate, tLateDone], 'overdue');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Late Task');
+  });
+
+  test('"high" returns high priority pending tasks', () => {
+    const tHigh = makeTask({ title: 'Important', priority: 'high' });
+    const tHighDone = makeCompleted(makeTask({ title: 'Done High', priority: 'high' }));
+    const tMed = makeTask({ title: 'Normal', priority: 'medium' });
+    const result = filterByStatus([tHigh, tHighDone, tMed], 'high');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Important');
+  });
+});
+
+// ─── filterByCategory ─────────────────────────────────────────────────────────
+
+describe('filterByCategory', () => {
+  test('filters tasks strictly matching category (case-insensitive)', () => {
+    const tWork = makeTask({ title: 'Write PR', category: 'Work' });
+    const tHome = makeTask({ title: 'Vacuum', category: 'Personal' });
+    const result = filterByCategory([tWork, tHome], 'Work');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Write PR');
+  });
+
+  test('returns all tasks when category is "all" or omitted', () => {
+    const t1 = makeTask({ title: 'A', category: 'Work' });
+    const t2 = makeTask({ title: 'B', category: 'Personal' });
+    assert.equal(filterByCategory([t1, t2], 'all').length, 2);
+    assert.equal(filterByCategory([t1, t2], '').length, 2);
+  });
+
+  test('returns empty array when category has no matching tasks', () => {
+    const t1 = makeTask({ title: 'A', category: 'Work' });
+    assert.equal(filterByCategory([t1], 'Finance').length, 0);
+  });
 });
 
 // ─── filterBySearch ───────────────────────────────────────────────────────────
@@ -118,6 +180,16 @@ describe('filterBySearch', () => {
     const result = filterBySearch(tasks, 'deploy');
     assert.equal(result.length, 1);
   });
+
+  test('matches by category', () => {
+    const tasks = [
+      makeTask({ title: 'Tax return', category: 'Finance' }),
+      makeTask({ title: 'Yoga routine', category: 'Health' }),
+    ];
+    const result = filterBySearch(tasks, 'finance');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, 'Tax return');
+  });
 });
 
 // ─── applyFilters ─────────────────────────────────────────────────────────────
@@ -148,6 +220,23 @@ describe('applyFilters', () => {
     const tasks = [makeCompleted(createTask({ title: 'Buy milk' }))];
     const result = applyFilters(tasks, { status: 'pending', search: 'milk' });
     assert.equal(result.length, 0);
+  });
+
+  test('applies status, category, search, and sortBy simultaneously', () => {
+    const t1 = createTask({ title: 'Review pull request', category: 'Work', priority: 'low' });
+    const t2 = createTask({ title: 'Submit pull request', category: 'Work', priority: 'high' });
+    const t3 = createTask({ title: 'Work out at gym', category: 'Health', priority: 'high' });
+
+    const result = applyFilters([t1, t2, t3], {
+      status: 'pending',
+      category: 'Work',
+      search: 'request',
+      sortBy: 'priority',
+    });
+
+    assert.equal(result.length, 2);
+    assert.equal(result[0].title, 'Submit pull request');
+    assert.equal(result[1].title, 'Review pull request');
   });
 });
 
@@ -191,5 +280,40 @@ describe('sortTasks', () => {
     const t = createTask({ title: 'Solo' });
     const sorted = sortTasks([t]);
     assert.equal(sorted.length, 1);
+  });
+
+  test('sorts by newest first (createdAt descending)', () => {
+    const t1 = { ...createTask({ title: 'Older' }), createdAt: '2026-01-01T10:00:00.000Z' };
+    const t2 = { ...createTask({ title: 'Newer' }), createdAt: '2026-02-01T10:00:00.000Z' };
+    const sorted = sortTasks([t1, t2], 'newest');
+    assert.equal(sorted[0].title, 'Newer');
+    assert.equal(sorted[1].title, 'Older');
+  });
+
+  test('sorts by oldest first (createdAt ascending)', () => {
+    const t1 = { ...createTask({ title: 'Older' }), createdAt: '2026-01-01T10:00:00.000Z' };
+    const t2 = { ...createTask({ title: 'Newer' }), createdAt: '2026-02-01T10:00:00.000Z' };
+    const sorted = sortTasks([t2, t1], 'oldest');
+    assert.equal(sorted[0].title, 'Older');
+    assert.equal(sorted[1].title, 'Newer');
+  });
+
+  test('sorts by dueDate (earliest due first, with dates before without)', () => {
+    const tNoDate = createTask({ title: 'No date' });
+    const tLater = createTask({ title: 'Later', dueDate: '2026-10-15' });
+    const tSooner = createTask({ title: 'Sooner', dueDate: '2026-05-01' });
+
+    const sorted = sortTasks([tNoDate, tLater, tSooner], 'dueDate');
+    assert.equal(sorted[0].title, 'Sooner');
+    assert.equal(sorted[1].title, 'Later');
+    assert.equal(sorted[2].title, 'No date');
+  });
+
+  test('sorts by recently updated (updatedAt descending)', () => {
+    const t1 = { ...createTask({ title: 'Stale' }), updatedAt: '2026-01-01T10:00:00.000Z' };
+    const t2 = { ...createTask({ title: 'Fresh' }), updatedAt: '2026-03-01T10:00:00.000Z' };
+    const sorted = sortTasks([t1, t2], 'updated');
+    assert.equal(sorted[0].title, 'Fresh');
+    assert.equal(sorted[1].title, 'Stale');
   });
 });
