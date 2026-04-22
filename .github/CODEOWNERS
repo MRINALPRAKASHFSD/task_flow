@@ -1,0 +1,26 @@
+# CODEOWNERS
+# Owners are automatically requested for review on pull requests.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for all files
+* @MRINALPRAKASHFSD
+
+# JavaScript application source
+/js/ @MRINALPRAKASHFSD
+
+# CSS
+/css/ @MRINALPRAKASHFSD
+
+# Tests
+/tests/ @MRINALPRAKASHFSD
+
+# Documentation
+/docs/ @MRINALPRAKASHFSD
+
+# GitHub configuration and workflows
+/.github/ @MRINALPRAKASHFSD
+
+# Security-sensitive files
+SECURITY.md @MRINALPRAKASHFSD
+LICENSE @MRINALPRAKASHFSD
+NOTICE @MRINALPRAKASHFSD
