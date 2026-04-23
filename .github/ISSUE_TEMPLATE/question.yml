@@ -1,0 +1,28 @@
+---
+name: Question
+description: Ask a question about how TaskFlow works.
+title: "[Question]: "
+labels: ["question"]
+assignees:
+  - MRINALPRAKASHFSD
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, please check the [User Guide](../docs/USER_GUIDE.md),
+        [README](../README.md) and existing issues and discussions.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What would you like to know?
+      placeholder: "How do I export my tasks to a file?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What have you already tried or read?
