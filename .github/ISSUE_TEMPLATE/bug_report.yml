@@ -1,0 +1,90 @@
+---
+name: Bug Report
+description: Report a defect in TaskFlow so we can fix it.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees:
+  - MRINALPRAKASHFSD
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug!
+        Please complete all required fields so we can reproduce and fix the issue.
+
+  - type: checkboxes
+    id: existing_issues
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I searched for existing issues before opening this report.
+          required: true
+        - label: I am using the latest version of TaskFlow.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I click 'Add Task' without a title, the page crashes instead of showing a validation error."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably reproduce the problem.
+      placeholder: |
+        1. Open index.html in Chrome
+        2. Click "Add Task"
+        3. Leave the title field empty
+        4. Click "Save Task"
+        5. Observe the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: A validation error message should appear under the title field.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      placeholder: The page becomes unresponsive and the browser console shows an uncaught TypeError.
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: "Chrome 130.0.6723.91"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.1 / Windows 11 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or console output
+      description: Paste screenshots or console error messages here (optional but helpful).
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other information that might help (LocalStorage contents, browser extensions, etc.).
