@@ -1,0 +1,92 @@
+# GitHub Actions — CI Workflow
+# Runs unit tests on every push to main and on pull requests.
+#
+# Copyright (c) 2026 Mrinal Prakash
+# SPDX-License-Identifier: MIT
+#
+# Action version pins:
+#   actions/checkout              v4 → SHA pinned below
+#   actions/setup-node            v4 → SHA pinned below
+#
+# To update pins:
+#   1. Visit https://github.com/actions/checkout/releases for the latest release.
+#   2. Find the full commit SHA for that release tag.
+#   3. Replace the SHA below and update the comment.
+
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+# Least-privilege permissions: read-only by default.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit Tests (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22", "24"]
+
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.2.2 — 2024-10-28
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        # actions/setup-node v4.1.0 — 2024-11-04
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Verify Node.js version
+        run: node --version
+
+      - name: Run unit tests
+        run: node --test tests/tasks.test.js tests/filters.test.js tests/storage.test.js
+
+      - name: Verify HTML structure (basic check)
+        run: |
+          if ! grep -q '<!DOCTYPE html>' index.html; then
+            echo "ERROR: index.html is missing DOCTYPE declaration."
+            exit 1
+          fi
+          if ! grep -q '<main' index.html; then
+            echo "ERROR: index.html is missing a <main> element."
+            exit 1
+          fi
+          echo "HTML structure checks passed."
+
+      - name: Verify required files exist
+        run: |
+          for file in \
+            index.html \
+            LICENSE \
+            NOTICE \
+            README.md \
+            CONTRIBUTING.md \
+            CODE_OF_CONDUCT.md \
+            SECURITY.md \
+            CHANGELOG.md \
+            package.json \
+            js/app.js \
+            js/tasks.js \
+            js/storage.js \
+            js/filters.js \
+            js/utils.js \
+            css/styles.css \
+            css/variables.css \
+            css/responsive.css; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Required file missing: $file"
+              exit 1
+            fi
+          done
+          echo "All required files present."
