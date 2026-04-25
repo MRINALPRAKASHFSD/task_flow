@@ -1,0 +1,58 @@
+# GitHub Actions — CodeQL Security Analysis
+# Performs static analysis of JavaScript for security vulnerabilities.
+#
+# Copyright (c) 2026 Mrinal Prakash
+# SPDX-License-Identifier: MIT
+#
+# Action version pins:
+#   actions/checkout              v4 → SHA pinned below
+#   github/codeql-action/init     v3 → SHA pinned below
+#   github/codeql-action/autobuild v3 → SHA pinned below
+#   github/codeql-action/analyze  v3 → SHA pinned below
+#
+# To update pins, visit:
+#   https://github.com/github/codeql-action/releases
+
+name: CodeQL
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Run weekly on Sunday at 02:17 UTC
+    - cron: "17 2 * * 0"
+
+# Least-privilege permissions.
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze JavaScript
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.2.2 — 2024-10-28
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Initialize CodeQL
+        # github/codeql-action/init v3.27.0 — 2024-11-04
+        uses: github/codeql-action/init@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+        with:
+          languages: javascript
+          # Use the default CodeQL query suite for JavaScript.
+          queries: security-and-quality
+
+      - name: Autobuild
+        # github/codeql-action/autobuild v3.27.0 — 2024-11-04
+        uses: github/codeql-action/autobuild@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+
+      - name: Perform CodeQL Analysis
+        # github/codeql-action/analyze v3.27.0 — 2024-11-04
+        uses: github/codeql-action/analyze@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+        with:
+          category: "/language:javascript"
