@@ -1,120 +1,140 @@
 # User Guide — TaskFlow
 
 > Documentation License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+> See `LICENSE-CC-BY-4.0` in this directory.
+
+Welcome to **TaskFlow** — *Plan smarter. Stay organized. Get things done.*
+
+TaskFlow is a fast, lightweight, and modern productivity dashboard designed to keep your work organized without bloated dependencies, cloud tracking, or mandatory logins.
+
+---
 
 ## Getting Started
 
-Open `index.html` in any modern browser. No installation or account is required.
-Your tasks are stored privately in your browser's LocalStorage and never sent to a server.
+1. Open `index.html` in any modern web browser, or run `npm start` to serve locally at `http://localhost:8080`.
+2. No signup or account configuration is required.
+3. All tasks and settings are persisted securely in your browser's `localStorage` and never transmit data across the internet.
 
 ---
 
-## The Interface
+## Workspace Layout
 
-### Header
-- **TaskFlow logo** — branding and home link.
-- **Theme toggle (🌙 / ☀️)** — switches between light and dark themes.
+### Desktop Productivity Dashboard
 
-### Sidebar (desktop)
-- **All Tasks** — shows every task.
-- **Pending** — shows only incomplete tasks.
-- **Completed** — shows only finished tasks.
-- Each view shows a count badge.
+- **Header**:
+  - **Mobile Menu Toggle**: Visible on tablet and mobile viewports.
+  - **TaskFlow Brand**: Logo with productivity check icon.
+  - **Quick Add Task Button**: Fast action button for rapid task entry.
+  - **Theme Toggle (🌙 / ☀️)**: Switch between Light and Dark themes.
 
-### Dashboard statistics
-Four cards show: **Total Tasks**, **Pending**, **Completed** and **High Priority (pending)**.
-A progress bar shows the percentage of tasks completed.
+- **Sidebar Navigation**:
+  - **Views**:
+    - **All Tasks**: Complete collection of tasks.
+    - **Today**: Tasks with a due date matching the current calendar day.
+    - **Upcoming**: Tasks due in the future.
+    - **Overdue**: Incomplete tasks whose due dates have passed.
+    - **Completed**: Finished tasks with strikethrough styling.
+  - **Categories**:
+    - **All Categories**, **Work**, **Personal**, **Study**, **Health**, **Finance**, and **General**.
+    - Each category item displays a color-coded indicator and real-time pending task counter.
 
-### Toolbar
-- **Search box** — type to search tasks by title or description.
-- **Filter tabs** — All / Pending / Completed.
-- **Add Task button** — opens the task creation form.
-
----
-
-## Managing Tasks
-
-### Add a task
-1. Click **Add Task**.
-2. Enter a **title** (required, up to 200 characters).
-3. Enter an optional **description** (up to 1,000 characters).
-4. Choose a **priority**: Low 🟢, Medium 🟡 or High 🔴.
-5. Click **Save Task**.
-
-### Edit a task
-1. Hover over a task card. The action buttons appear.
-2. Click the **✏️ edit** button.
-3. Modify the fields in the modal.
-4. Click **Save Task**.
-
-### Complete a task
-- Click the **circle checkbox** on the left of the task card.
-- The task is marked completed, styled with a strikethrough and moved to the bottom.
-- Click again to mark it as pending.
-
-### Delete a task
-1. Hover over a task card and click the **🗑️ delete** button.
-2. A confirmation dialog appears. Click **Delete** to confirm or **Cancel** to abort.
+- **Main Content Area**:
+  - **Welcome Header**: Time-aware greeting (Good morning / afternoon / evening) and formatted local date.
+  - **Dashboard Metrics**:
+    - **Total Tasks**: Aggregate task volume.
+    - **Pending Tasks**: Work awaiting completion.
+    - **Completed Tasks**: Finished tasks.
+    - **Overdue Tasks**: Work that requires urgent rescheduling.
+    - **High Priority**: Pending critical items.
+    - **Progress Bar**: Live completion rate calculation.
+  - **Interactive Toolbar**:
+    - **Search Box**: Instant filter searching title, description, and category. Includes a quick clear (`×`) button.
+    - **Category Selector**: Dropdown to narrow tasks by category.
+    - **Sort Control**: Dynamic sorting dropdown.
+    - **Filter Tabs**: Quick toggle between All, Pending, and Completed.
+    - **Add Task Button**: Opens full task creation dialog.
+  - **Task List**: Responsive cards with status checkboxes, priority badges, category tags, due date badges, and action controls.
 
 ---
 
-## Filtering and Searching
+## Task Management Operations
 
-- **Status filter** — use the tabs (All / Pending / Completed) or the sidebar links.
-  Your active filter is remembered between sessions.
-- **Search** — type in the search box. Results update instantly.
-  Search matches against both the title and the description.
-  The empty state message changes to explain there are no matching results.
+### 1. Creating a Task
+1. Click **+ Add Task** in the toolbar or header.
+2. Enter a **Task Title** (required, 1–200 characters).
+3. Optionally enter a **Description** (up to 1,000 characters).
+4. Select a **Priority**:
+   - 🟢 **Low**: Routine or non-urgent items.
+   - 🟡 **Medium**: Standard priority (default).
+   - 🔴 **High**: Critical tasks requiring immediate attention.
+5. Select a **Category**:
+   - `Work`, `Personal`, `Study`, `Health`, `Finance`, or `General`.
+6. Optionally set a **Due Date** using the calendar picker (`YYYY-MM-DD`).
+7. Click **Save Task** or press `Enter`.
 
----
+### 2. Editing a Task
+1. Hover or focus on any task card and click the **✏️ Edit** button.
+2. Update the title, description, priority, category, or due date.
+3. Click **Save Task**. Your changes are saved immediately and timestamps updated.
 
-## Priorities
+### 3. Completing and Reopening Tasks
+- Click the circular checkbox on the left of any task card.
+- The task instantly toggles to **Completed**, visual strikethrough is applied, and the dashboard progress bar updates in real time.
+- Clicking the checkbox on a completed task reopens it as **Pending**.
 
-| Priority | Colour | Meaning |
-|----------|--------|---------|
-| 🟢 Low   | Green  | Non-urgent, can wait |
-| 🟡 Medium | Yellow | Default; should be addressed soon |
-| 🔴 High  | Red    | Urgent; requires immediate attention |
-
-High-priority pending tasks are counted separately in the dashboard.
-Tasks are sorted: high-priority pending first, then medium, then low. Completed tasks appear last.
-
----
-
-## Themes
-
-TaskFlow supports **light** and **dark** themes.
-On first visit the theme is set to match your operating system preference.
-Click the toggle in the header to override it. Your preference is remembered.
-
----
-
-## Keyboard Navigation
-
-| Key | Action |
-|-----|--------|
-| `Tab` | Move focus to the next interactive element |
-| `Shift+Tab` | Move focus to the previous interactive element |
-| `Enter` / `Space` | Activate buttons and checkboxes |
-| `Escape` | Close any open modal dialog |
+### 4. Deleting a Task
+1. Click the **🗑️ Delete** button on the task card.
+2. An accessible confirmation dialog asks for confirmation.
+3. Click **Delete** to confirm permanent removal, or **Cancel** to abort.
 
 ---
 
-## Data and Privacy
+## Filtering, Searching & Sorting
 
-- All data is stored exclusively in your browser's **LocalStorage**.
-- No data is sent to any server or third party.
-- Clearing your browser's site data will erase your tasks.
-- There is no account, no sync and no cloud backup in v1.0.
+### Filtering by View
+- Select **All Tasks**, **Today**, **Upcoming**, **Overdue**, or **Completed** in the sidebar.
+- Use the quick status tabs (**All**, **Pending**, **Completed**) in the toolbar.
+- The active view is remembered across browser sessions.
+
+### Category Filtering
+- Use the sidebar category list or the toolbar category dropdown to view tasks in specific areas of life or work.
+
+### Real-Time Search
+- Type into the search input. Results update immediately as you type.
+- Matches against:
+  - Task title
+  - Task description
+  - Category name
+- Click the clear button (`×`) inside the search box or press `Escape` to reset the search query.
+
+### Sorting Options
+Switch between 5 sorting strategies via the Sort dropdown:
+1. **Newest first**: Most recently created tasks at the top.
+2. **Oldest first**: Earliest created tasks first.
+3. **Priority**: High-priority tasks first, followed by medium and low.
+4. **Due date**: Earliest due dates first; tasks with deadlines precede tasks without deadlines.
+5. **Recently updated**: Tasks modified most recently appear first.
 
 ---
 
-## Browser Support
+## Keyboard Shortcuts & Accessibility
 
-TaskFlow is tested on the latest versions of:
-- Google Chrome
-- Mozilla Firefox
-- Apple Safari
-- Microsoft Edge
+| Key Combination | Action |
+|---|---|
+| `Tab` | Advance focus to next interactive element |
+| `Shift + Tab` | Move focus to previous interactive element |
+| `Enter` / `Space` | Toggle checkboxes, open modals, trigger buttons |
+| `Escape` | Dismiss open dialogs, clear search input, or close mobile drawer |
 
-Internet Explorer is not supported.
+- **Skip Navigation**: Press `Tab` upon initial page load to reveal the "Skip to main content" link.
+- **Screen Reader Announcements**: An `aria-live="polite"` announcer reports task additions, deletions, completions, and filter transitions.
+- **High Contrast**: Fully compatible with Windows High Contrast Mode (`forced-colors: active`).
+- **Reduced Motion**: Respects `prefers-reduced-motion: reduce` settings.
+
+---
+
+## Data Privacy & Offline Storage
+
+- All TaskFlow data is saved locally in browser `localStorage`.
+- No tracking cookies, external analytics, or remote API queries are executed.
+- Clearing your browser site data will remove your saved tasks. We recommend backing up your tasks if clearing browser cache.

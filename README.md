@@ -29,22 +29,25 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 
 | Feature | Description |
 |---------|-------------|
-| ✅ Create tasks | Add tasks with a title, optional description and priority. |
-| ✏️ Edit tasks | Update any task in place via the edit modal. |
-| 🗑️ Delete tasks | Remove tasks with a confirmation prompt. |
-| ☑️ Toggle status | Mark tasks as completed or pending with a single click. |
+| ✅ Create tasks | Add tasks with title, description, priority, category and due date. |
+| ✏️ Edit tasks | Update any task in place via the accessible edit modal. |
+| 🗑️ Delete tasks | Remove tasks with an accessible confirmation prompt. |
+| ☑️ Toggle status | Mark tasks as completed or reopen them with a single click. |
 | 🔴🟡🟢 Priority | Assign Low, Medium or High priority with colour-coded indicators. |
-| 🔍 Search | Real-time search across title and description. |
-| 🗂️ Filter | Filter by All, Pending or Completed. |
-| 📊 Statistics | Dashboard showing total, pending, completed and high-priority counts. |
-| 📈 Progress bar | Completion percentage visualised as a progress bar. |
-| 💾 Persistence | Tasks, theme and active filter saved to LocalStorage. |
-| 🕐 Timestamps | Creation and update times shown as relative labels. |
-| 🌙 Light / Dark | Theme follows OS preference; user override is persisted. |
-| 📱 Responsive | Works on mobile (320 px) through large desktop (1280 px+). |
-| ♿ Accessible | Skip link, ARIA attributes, keyboard navigation, focus management. |
+| 🏷️ Categories | Organize tasks into Work, Personal, Study, Health, Finance, or General. |
+| 📅 Due dates | Set due dates with contextual badges (Today, Tomorrow, Overdue, or formatted dates). |
+| 🔍 Multi-field search | Real-time search matching title, description and category, with instant clear button. |
+| 🗂️ Views & Filters | Filter by All Tasks, Today, Upcoming, Overdue, Completed, or High Priority. |
+| ↕️ Sorting modes | Sort by Newest first, Oldest first, Priority, Due date, or Recently updated. |
+| 📊 Statistics | Dashboard showing total, pending, completed, overdue and high-priority counts. |
+| 📈 Progress bar | Real-time completion percentage visualised with a progress bar. |
+| 💾 Versioned persistence | App state saved to LocalStorage with schema versioning and memory fallback. |
+| 🕐 Timestamps | Creation and update times shown as relative or formatted date labels. |
+| 🌙 Light / Dark themes | Follows OS preference on first visit; user override is persisted. |
+| 📱 Mobile responsive | Clean responsive layout with hamburger menu and slide-out navigation drawer. |
+| ♿ Accessible | Skip link, ARIA live announcements, keyboard navigation, focus management. |
 | 📭 Empty states | Context-sensitive messages when no tasks match the view or search. |
-| 🔔 Toast notifications | Non-blocking feedback for every action. |
+| 🔔 Toast notifications | Non-blocking feedback for every user action. |
 | 🛡️ Validation | Client-side form validation with accessible inline error messages. |
 
 ---
@@ -145,7 +148,7 @@ taskflow/
 │   ├── filters.js          Filter and sort logic
 │   └── utils.js            Shared utility helpers (ID generation, date formatting, etc.)
 ├── tests/
-│   ├── tasks.test.js       72 unit tests across all modules
+│   ├── tasks.test.js       108 unit tests across all modules
 │   ├── filters.test.js
 │   └── storage.test.js
 └── docs/
@@ -160,13 +163,16 @@ taskflow/
 
 ```js
 {
-  id:          string,    // Unique UUID or fallback identifier
-  title:       string,    // 1–200 characters (required)
-  description: string,    // 0–1000 characters (optional)
-  priority:    'low' | 'medium' | 'high',
-  status:      'pending' | 'completed',
-  createdAt:   string,    // ISO 8601
-  updatedAt:   string,    // ISO 8601
+  id:          string,                     // Unique UUID or fallback identifier
+  title:       string,                     // 1–200 characters (required)
+  description: string,                     // 0–1000 characters (optional)
+  priority:    'low' | 'medium' | 'high',  // Task priority
+  category:    string,                     // 'Work' | 'Personal' | 'Study' | 'Health' | 'Finance' | 'General'
+  status:      'pending' | 'completed',    // Status string
+  completed:   boolean,                    // Synchronized boolean state
+  dueDate:     string | null,              // 'YYYY-MM-DD' or null
+  createdAt:   string,                     // ISO 8601 UTC timestamp
+  updatedAt:   string,                     // ISO 8601 UTC timestamp
 }
 ```
 
@@ -174,18 +180,21 @@ taskflow/
 
 | Module | Responsibility |
 |--------|---------------|
-| `tasks.js` | Pure functions — task creation, mutation, validation and statistics. No DOM or storage access. |
-| `storage.js` | All LocalStorage reads and writes, wrapped in try/catch. |
-| `filters.js` | Pure filter and sort functions. No side effects. |
-| `utils.js` | Shared helpers: ID generation, date formatting, debounce. |
-| `app.js` | Wires everything together: reads state, calls domain functions, updates the DOM. |
+| `tasks.js` | Pure functions — task creation, mutation, validation, deadline checks, and statistics. |
+| `storage.js` | Versioned LocalStorage reads, writes, validation, and in-memory fallback. |
+| `filters.js` | Pure multi-criteria filtering (status, category, search) and sorting. |
+| `utils.js` | Shared helpers: date formatting, UUID generation, debouncing, and DOM node helpers. |
+| `app.js` | Controller: state orchestration, event listeners, modal lifecycle, and DOM rendering. |
 
 ---
 
 ## Testing
 
 ```bash
-# Run all 72 unit tests
+# Run full verification (syntax checks + 108 unit tests)
+npm run check
+
+# Run all unit tests
 npm test
 
 # Run individual test files

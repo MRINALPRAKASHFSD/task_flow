@@ -9,7 +9,20 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-*(Changes staged for the next release appear here.)*
+### Added
+
+- **Phase 2 Application Architecture & Features**:
+  - **Extended Task Data Model**: Added `category` (`Work`, `Personal`, `Study`, `Health`, `Finance`, `General`), `dueDate` (standardized `YYYY-MM-DD`), and synchronized `completed` boolean property.
+  - **New Productivity Views**: Added sidebar views for **Today** (tasks due current day), **Upcoming** (tasks due in future), **Overdue** (pending tasks past deadline), and **High Priority**.
+  - **Category System**: Added color-coded category dots, category tags on task cards, category filtering dropdown in toolbar, and category navigation with real-time pending counters in the sidebar.
+  - **Contextual Due Date Badges**: Added visual due date indicators with distinct styles for "Overdue", "Today", "Tomorrow", and formatted upcoming dates.
+  - **Multi-Field Search & Clear**: Enhanced real-time search to query task title, description, and category simultaneously, and added an instant clear (`×`) button in the search field.
+  - **Multi-Criteria Sorting**: Implemented 5 deterministic sorting options: *Newest first*, *Oldest first*, *Priority*, *Due date*, and *Recently updated*.
+  - **Enhanced Dashboard Statistics**: Added **Overdue Tasks** metric card, dynamic time-aware greeting (*Good morning / afternoon / evening*), and formatted localized header date.
+  - **Versioned Storage & Migration Engine**: Implemented `taskflow_data` with schema versioning (`version: 1`), task record validation (`validateTaskRecord`, `cleanseTaskList`), automatic migration of legacy Phase 1 keys, and in-memory fallback.
+  - **Mobile Responsive Drawer**: Added hamburger menu button in header and animated slide-out navigation drawer with backdrop overlay for tablet and mobile devices.
+  - **Comprehensive Unit Testing**: Expanded test coverage from 72 to 108 tests across 26 suites, covering all Phase 2 features and edge cases.
+  - **Code Quality Script**: Added `npm run check` script running syntax checks across all JS/test files and executing test runner.
 
 ---
 
