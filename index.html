@@ -293,6 +293,24 @@
           </ul>
         </div>
 
+        <!-- Preferences / Settings Section -->
+        <div class="sidebar-section">
+          <div class="sidebar-section__title">Preferences</div>
+          <ul class="sidebar-nav" role="list">
+            <li class="sidebar-nav__item">
+              <button
+                id="sidebar-settings"
+                type="button"
+                class="sidebar-nav__link"
+                aria-label="Open settings and data management"
+              >
+                <span class="sidebar-nav__icon" aria-hidden="true">⚙️</span>
+                <span class="sidebar-nav__label">Settings</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
         <!-- Sidebar footer info -->
         <div class="sidebar-footer">
           <div class="sidebar-footer__text">
@@ -639,6 +657,73 @@
         <div class="confirm-dialog__actions">
           <button id="btn-confirm-cancel" type="button" class="btn btn-secondary">Cancel</button>
           <button id="btn-confirm-ok"     type="button" class="btn btn-danger-solid">Delete Task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================
+       SETTINGS & DATA MANAGEMENT MODAL
+       ==================================================== -->
+  <div
+    id="settings-overlay"
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="settings-dialog-title"
+  >
+    <div class="modal modal--settings">
+      <div class="modal__header">
+        <h2 id="settings-dialog-title" class="modal__title">Settings & Data</h2>
+        <button
+          id="settings-close"
+          type="button"
+          class="modal__close"
+          aria-label="Close settings dialog"
+        >✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="settings-group">
+          <h3 class="settings-group__title">Theme Preference</h3>
+          <div class="settings-theme-buttons">
+            <button id="btn-theme-light" type="button" class="btn btn-secondary btn-sm">☀️ Light</button>
+            <button id="btn-theme-dark" type="button" class="btn btn-secondary btn-sm">🌙 Dark</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="settings-group__title">Backup & Restore</h3>
+          <p class="settings-group__desc text-muted text-sm">
+            Save your tasks to an offline JSON backup or restore from a previously saved file.
+          </p>
+          <div class="settings-actions">
+            <button id="btn-export-json" type="button" class="btn btn-secondary btn-sm">
+              📥 Export Tasks (JSON)
+            </button>
+            <label for="import-file-input" class="btn btn-secondary btn-sm file-upload-label">
+              📤 Import Tasks (JSON)
+            </label>
+            <input
+              id="import-file-input"
+              type="file"
+              accept=".json,application/json"
+              class="sr-only"
+            />
+          </div>
+        </div>
+
+        <div class="settings-group settings-group--danger">
+          <h3 class="settings-group__title">Data Cleanup</h3>
+          <div class="settings-actions">
+            <button id="btn-clear-completed" type="button" class="btn btn-secondary btn-sm">
+              🧹 Clear Completed Tasks
+            </button>
+            <button id="btn-clear-all" type="button" class="btn btn-danger-ghost btn-sm">
+              ⚠️ Reset All Tasks
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1100,6 +1100,51 @@ a:hover { text-decoration: underline; }
 }
 
 /* ============================================================
+   SETTINGS MODAL
+   ============================================================ */
+.modal--settings {
+  max-width: 480px;
+}
+
+.settings-group {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-group:first-child {
+  padding-top: 0;
+}
+
+.settings-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settings-group__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.settings-group__desc {
+  margin-bottom: var(--space-3);
+  line-height: var(--line-height-relaxed);
+}
+
+.settings-theme-buttons,
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.file-upload-label {
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ============================================================
    CONFIRMATION DIALOG
    ============================================================ */
 .confirm-dialog__message {

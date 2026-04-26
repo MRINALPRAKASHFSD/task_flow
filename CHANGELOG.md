@@ -21,7 +21,8 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - **Enhanced Dashboard Statistics**: Added **Overdue Tasks** metric card, dynamic time-aware greeting (*Good morning / afternoon / evening*), and formatted localized header date.
   - **Versioned Storage & Migration Engine**: Implemented `taskflow_data` with schema versioning (`version: 1`), task record validation (`validateTaskRecord`, `cleanseTaskList`), automatic migration of legacy Phase 1 keys, and in-memory fallback.
   - **Mobile Responsive Drawer**: Added hamburger menu button in header and animated slide-out navigation drawer with backdrop overlay for tablet and mobile devices.
-  - **Comprehensive Unit Testing**: Expanded test coverage from 72 to 108 tests across 26 suites, covering all Phase 2 features and edge cases.
+  - **Settings & Data Management**: Added accessible Settings modal with offline JSON backup export (`exportAppStateJSON`), validated import (`importAppStateJSON`), clear completed tasks, and data reset.
+  - **Comprehensive Unit Testing**: Expanded test coverage from 72 to 112 tests across 27 suites, covering all Phase 2 features and edge cases.
   - **Code Quality Script**: Added `npm run check` script running syntax checks across all JS/test files and executing test runner.
 
 ---

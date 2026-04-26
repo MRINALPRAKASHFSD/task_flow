@@ -375,6 +375,62 @@ export function saveFilter(filter) {
   return storageSet(STORAGE_KEYS.FILTER, filter);
 }
 
+// ─── Export & Import ──────────────────────────────────────────────────────────
+
+/**
+ * Export the current application state as a formatted JSON string.
+ *
+ * @returns {string}
+ */
+export function exportAppStateJSON() {
+  const state = loadAppState();
+  return JSON.stringify(state, null, 2);
+}
+
+/**
+ * Import application state from a JSON string, validating and sanitising tasks.
+ *
+ * @param {string} jsonString
+ * @returns {{ success: boolean, count?: number, error?: string }}
+ */
+export function importAppStateJSON(jsonString) {
+  if (typeof jsonString !== 'string' || !jsonString.trim()) {
+    return { success: false, error: 'Empty or invalid JSON content.' };
+  }
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    if (!parsed || typeof parsed !== 'object') {
+      return { success: false, error: 'JSON root must be an object or array.' };
+    }
+
+    const rawTasks = Array.isArray(parsed.tasks)
+      ? parsed.tasks
+      : (Array.isArray(parsed) ? parsed : []);
+
+    const cleansed = cleanseTaskList(rawTasks);
+
+    const preferences = (parsed.preferences && typeof parsed.preferences === 'object')
+      ? {
+          theme: parsed.preferences.theme === 'dark' ? 'dark' : 'light',
+          filter: typeof parsed.preferences.filter === 'string' ? parsed.preferences.filter : 'all',
+          sortBy: typeof parsed.preferences.sortBy === 'string' ? parsed.preferences.sortBy : 'newest',
+          category: typeof parsed.preferences.category === 'string' ? parsed.preferences.category : 'all',
+        }
+      : undefined;
+
+    saveAppState({
+      version: CURRENT_SCHEMA_VERSION,
+      tasks: cleansed,
+      preferences,
+    });
+
+    return { success: true, count: cleansed.length };
+  } catch (err) {
+    return { success: false, error: 'Invalid JSON file: ' + err.message };
+  }
+}
+
 // ─── Memory Store Clear ───────────────────────────────────────────────────────
 
 export function clearMemoryStore() {

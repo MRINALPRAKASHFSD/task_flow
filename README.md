@@ -49,6 +49,7 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 | 📭 Empty states | Context-sensitive messages when no tasks match the view or search. |
 | 🔔 Toast notifications | Non-blocking feedback for every user action. |
 | 🛡️ Validation | Client-side form validation with accessible inline error messages. |
+| 📦 Backup & Restore | Export and import task data as JSON files directly from Settings. |
 
 ---
 
@@ -148,7 +149,7 @@ taskflow/
 │   ├── filters.js          Filter and sort logic
 │   └── utils.js            Shared utility helpers (ID generation, date formatting, etc.)
 ├── tests/
-│   ├── tasks.test.js       108 unit tests across all modules
+│   ├── tasks.test.js       112 unit tests across all modules
 │   ├── filters.test.js
 │   └── storage.test.js
 └── docs/

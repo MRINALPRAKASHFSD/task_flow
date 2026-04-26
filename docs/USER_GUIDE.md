@@ -133,6 +133,18 @@ Switch between 5 sorting strategies via the Sort dropdown:
 
 ---
 
+## Settings & Data Management
+
+Access the Settings modal by clicking **⚙️ Settings** in the sidebar.
+
+- **Theme Preferences**: Switch between Light and Dark themes anytime.
+- **Export Tasks (JSON)**: Download a local timestamped backup of your tasks (`taskflow-backup-YYYY-MM-DD.json`).
+- **Import Tasks (JSON)**: Restore tasks from a previously saved backup file. Imported tasks are validated and sanitized automatically.
+- **Clear Completed Tasks**: Remove all completed tasks while keeping pending work intact.
+- **Reset All Tasks**: Clear all tasks and reset your dashboard back to an empty state.
+
+---
+
 ## Data Privacy & Offline Storage
 
 - All TaskFlow data is saved locally in browser `localStorage`.

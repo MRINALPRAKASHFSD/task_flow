@@ -46,6 +46,8 @@ const {
   validateTaskRecord,
   cleanseTaskList,
   clearMemoryStore,
+  exportAppStateJSON,
+  importAppStateJSON,
 } = await import('../js/storage.js');
 
 // ─── storageAvailable ──────────────────────────────────────────────────────
@@ -258,5 +260,63 @@ describe('loadAppState / saveAppState', () => {
     const state = loadAppState();
     assert.equal(state.version, 1);
     assert.deepEqual(state.tasks, []);
+  });
+});
+
+describe('exportAppStateJSON / importAppStateJSON', () => {
+  beforeEach(() => {
+    stubStorage.clear();
+    clearMemoryStore();
+  });
+
+  test('exportAppStateJSON returns valid serialized JSON', () => {
+    saveTasks([{ id: 'exp-1', title: 'Export me', status: 'pending', priority: 'medium', category: 'Work' }]);
+    const json = exportAppStateJSON();
+    assert.equal(typeof json, 'string');
+    const parsed = JSON.parse(json);
+    assert.equal(parsed.version, 1);
+    assert.equal(parsed.tasks.length, 1);
+    assert.equal(parsed.tasks[0].title, 'Export me');
+  });
+
+  test('importAppStateJSON successfully restores tasks from valid JSON', () => {
+    const backup = JSON.stringify({
+      version: 1,
+      tasks: [
+        { id: 'imp-1', title: 'Imported task', status: 'completed', priority: 'high', category: 'Study' }
+      ],
+      preferences: { theme: 'dark', filter: 'completed' },
+    });
+
+    const res = importAppStateJSON(backup);
+    assert.equal(res.success, true);
+    assert.equal(res.count, 1);
+
+    const loaded = loadAppState();
+    assert.equal(loaded.tasks.length, 1);
+    assert.equal(loaded.tasks[0].title, 'Imported task');
+    assert.equal(loaded.tasks[0].completed, true);
+    assert.equal(loaded.preferences.theme, 'dark');
+  });
+
+  test('importAppStateJSON gracefully rejects invalid JSON', () => {
+    const res = importAppStateJSON('not a json');
+    assert.equal(res.success, false);
+    assert.ok(res.error);
+  });
+
+  test('importAppStateJSON cleanses malformed records', () => {
+    const raw = JSON.stringify({
+      tasks: [
+        { id: 'good', title: 'Good task' },
+        { id: 'bad-no-title' },
+        null,
+        123
+      ]
+    });
+
+    const res = importAppStateJSON(raw);
+    assert.equal(res.success, true);
+    assert.equal(res.count, 1);
   });
 });

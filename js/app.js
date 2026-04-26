@@ -15,6 +15,8 @@ import {
   saveTheme,
   saveFilter,
   storageAvailable,
+  exportAppStateJSON,
+  importAppStateJSON,
 } from './storage.js';
 
 import {
@@ -143,6 +145,17 @@ const dom = {
   btnConfirmOk:       $('btn-confirm-ok'),
   btnConfirmCancel:   $('btn-confirm-cancel'),
 
+  // Settings & Data Management dialog
+  sidebarSettings:    $('sidebar-settings'),
+  settingsOverlay:    $('settings-overlay'),
+  settingsClose:      $('settings-close'),
+  btnThemeLight:      $('btn-theme-light'),
+  btnThemeDark:       $('btn-theme-dark'),
+  btnExportJson:      $('btn-export-json'),
+  importFileInput:    $('import-file-input'),
+  btnClearCompleted:  $('btn-clear-completed'),
+  btnClearAll:        $('btn-clear-all'),
+
   // Toast notifications
   toastContainer:     $('toast-container'),
 };
@@ -250,6 +263,116 @@ function closeConfirm(result) {
     _confirmResolve(result);
     _confirmResolve = null;
   }
+}
+
+// ─── Settings Modal Dialog ───────────────────────────────────────────────────
+
+function openSettings() {
+  if (!dom.settingsOverlay) return;
+  dom.settingsOverlay.classList.add('is-open');
+  dom.settingsOverlay.setAttribute('aria-hidden', 'false');
+  if (dom.settingsClose) dom.settingsClose.focus();
+}
+
+function closeSettings() {
+  if (!dom.settingsOverlay) return;
+  dom.settingsOverlay.classList.remove('is-open');
+  dom.settingsOverlay.setAttribute('aria-hidden', 'true');
+  if (dom.sidebarSettings) dom.sidebarSettings.focus();
+}
+
+function handleExportJSON() {
+  try {
+    const jsonStr = exportAppStateJSON();
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `taskflow-backup-${dateStamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Tasks exported successfully.', 'success');
+  } catch (err) {
+    showToast('Failed to export tasks: ' + err.message, 'error');
+  }
+}
+
+function handleImportJSON(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target?.result;
+      if (typeof content !== 'string') {
+        showToast('Failed to read file content.', 'error');
+        return;
+      }
+      const res = importAppStateJSON(content);
+      if (res.success) {
+        const refreshed = loadAppState();
+        state.tasks = refreshed.tasks;
+        state.theme = refreshed.preferences?.theme || state.theme;
+        state.filter = refreshed.preferences?.filter || 'all';
+        state.category = refreshed.preferences?.category || 'all';
+        state.sortBy = refreshed.preferences?.sortBy || 'default';
+        applyTheme(state.theme);
+        render();
+        closeSettings();
+        showToast(`Imported ${res.count} task(s) successfully.`, 'success');
+      } else {
+        showToast(res.error || 'Import failed.', 'error');
+      }
+    } catch (err) {
+      showToast('Error parsing file: ' + err.message, 'error');
+    } finally {
+      if (dom.importFileInput) dom.importFileInput.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function handleClearCompletedTasks() {
+  const completedCount = state.tasks.filter((t) => t.status === 'completed' || t.completed).length;
+  if (completedCount === 0) {
+    showToast('No completed tasks to clear.', 'info');
+    return;
+  }
+
+  const confirmed = await showConfirm(
+    `Are you sure you want to delete all ${completedCount} completed task(s)?`
+  );
+  if (!confirmed) return;
+
+  state.tasks = state.tasks.filter((t) => t.status !== 'completed' && !t.completed);
+  saveTasks(state.tasks);
+  persistState();
+  render();
+  closeSettings();
+  showToast(`Cleared ${completedCount} completed task(s).`, 'success');
+}
+
+async function handleResetAllTasks() {
+  if (state.tasks.length === 0) {
+    showToast('Your task list is already empty.', 'info');
+    return;
+  }
+
+  const confirmed = await showConfirm(
+    'Warning: This will permanently delete ALL tasks and reset your dashboard. Continue?'
+  );
+  if (!confirmed) return;
+
+  state.tasks = [];
+  saveTasks([]);
+  persistState();
+  render();
+  closeSettings();
+  showToast('All tasks have been reset.', 'info');
 }
 
 // ─── Task Modal Dialog ────────────────────────────────────────────────────────
@@ -847,11 +970,48 @@ function wireEvents() {
     if (e.target === dom.confirmOverlay) closeConfirm(false);
   });
 
+  // Settings Dialog
+  if (dom.sidebarSettings) {
+    dom.sidebarSettings.addEventListener('click', () => {
+      closeMobileNav();
+      openSettings();
+    });
+  }
+  if (dom.settingsClose) dom.settingsClose.addEventListener('click', closeSettings);
+  if (dom.settingsOverlay) {
+    dom.settingsOverlay.addEventListener('click', (e) => {
+      if (e.target === dom.settingsOverlay) closeSettings();
+    });
+  }
+  if (dom.btnThemeLight) {
+    dom.btnThemeLight.addEventListener('click', () => {
+      state.theme = 'light';
+      applyTheme('light');
+      saveTheme('light');
+      persistState();
+      showToast('Theme set to Light.', 'info');
+    });
+  }
+  if (dom.btnThemeDark) {
+    dom.btnThemeDark.addEventListener('click', () => {
+      state.theme = 'dark';
+      applyTheme('dark');
+      saveTheme('dark');
+      persistState();
+      showToast('Theme set to Dark.', 'info');
+    });
+  }
+  if (dom.btnExportJson) dom.btnExportJson.addEventListener('click', handleExportJSON);
+  if (dom.importFileInput) dom.importFileInput.addEventListener('change', handleImportJSON);
+  if (dom.btnClearCompleted) dom.btnClearCompleted.addEventListener('click', handleClearCompletedTasks);
+  if (dom.btnClearAll) dom.btnClearAll.addEventListener('click', handleResetAllTasks);
+
   // Keyboard navigation: Escape key closes active modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (dom.modalOverlay.classList.contains('is-open')) closeModal();
       if (dom.confirmOverlay.classList.contains('is-open')) closeConfirm(false);
+      if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) closeSettings();
       if (dom.appSidebar.classList.contains('is-open')) closeMobileNav();
     }
   });
