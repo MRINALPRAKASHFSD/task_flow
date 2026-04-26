@@ -40,19 +40,19 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Initialize CodeQL
-        # github/codeql-action/init v3.27.0 — 2024-11-04
-        uses: github/codeql-action/init@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+        # github/codeql-action/init v3.39.2 — 2026-11-03
+        uses: github/codeql-action/init@a3d1b77a1ba1550fbb5c74db1dc3a11f4a481126
         with:
-          languages: javascript
+          languages: javascript-typescript
           # Use the default CodeQL query suite for JavaScript.
           queries: security-and-quality
 
       - name: Autobuild
-        # github/codeql-action/autobuild v3.27.0 — 2024-11-04
-        uses: github/codeql-action/autobuild@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+        # github/codeql-action/autobuild v3.39.2 — 2026-11-03
+        uses: github/codeql-action/autobuild@a3d1b77a1ba1550fbb5c74db1dc3a11f4a481126
 
       - name: Perform CodeQL Analysis
-        # github/codeql-action/analyze v3.27.0 — 2024-11-04
-        uses: github/codeql-action/analyze@f09c1c0a94de965c15400f5634aa42fac9e1b8b0
+        # github/codeql-action/analyze v3.39.2 — 2026-11-03
+        uses: github/codeql-action/analyze@a3d1b77a1ba1550fbb5c74db1dc3a11f4a481126
         with:
-          category: "/language:javascript"
+          category: "/language:javascript-typescript"
