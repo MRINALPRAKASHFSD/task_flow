@@ -28,9 +28,9 @@ Constructive, respectful communication is expected at all times.
 
 ## Ways to Contribute
 
-- **Bug reports** — open a [Bug Report](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=bug_report.yml).
-- **Feature requests** — open a [Feature Request](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=feature_request.yml).
-- **Questions** — open a [Question](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=question.yml) or use [Discussions](https://github.com/MRINALPRAKASHFSD/taskflow/discussions).
+- **Bug reports** — open a [Bug Report](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=bug_report.yml).
+- **Feature requests** — open a [Feature Request](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=feature_request.yml).
+- **Questions** — open a [Question](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=question.yml) or use [Discussions](https://github.com/MRINALPRAKASHFSD/task_flow/discussions).
 - **Code contributions** — fix a bug, implement a feature or improve tests.
 - **Documentation improvements** — fix typos, clarify explanations.
 
@@ -51,11 +51,11 @@ Constructive, respectful communication is expected at all times.
 
 ```bash
 # 1. Fork the repository on GitHub, then clone your fork
-git clone https://github.com/<your-username>/taskflow.git
-cd taskflow
+git clone https://github.com/<your-username>/task_flow.git
+cd task_flow
 
 # 2. Add the upstream remote
-git remote add upstream https://github.com/MRINALPRAKASHFSD/taskflow.git
+git remote add upstream https://github.com/MRINALPRAKASHFSD/task_flow.git
 
 # 3. Install dependencies (there are none, but this verifies package.json)
 npm install

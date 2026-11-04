@@ -673,6 +673,7 @@
     aria-modal="true"
     aria-hidden="true"
     aria-labelledby="settings-dialog-title"
+    aria-describedby="settings-dialog-desc"
   >
     <div class="modal modal--settings">
       <div class="modal__header">
@@ -695,7 +696,7 @@
 
         <div class="settings-group">
           <h3 class="settings-group__title">Backup & Restore</h3>
-          <p class="settings-group__desc text-muted text-sm">
+          <p id="settings-dialog-desc" class="settings-group__desc text-muted text-sm">
             Save your tasks to an offline JSON backup or restore from a previously saved file.
           </p>
           <div class="settings-actions">

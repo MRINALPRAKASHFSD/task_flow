@@ -156,27 +156,48 @@ interface AppState {
 | `taskflow_theme` | JSON string (`'light'\|'dark'`) | Legacy theme preference store |
 | `taskflow_filter` | JSON string (`string`) | Legacy filter preference store |
 
-### Migration Strategy:
+### Migration Strategy & Import Pipeline:
 1. `loadAppState()` attempts to load `taskflow_data`.
 2. If absent or invalid, it inspects legacy keys (`taskflow_tasks`, `taskflow_theme`, `taskflow_filter`).
 3. Legacy records are cleansed, default fields (`category: 'General'`, `completed: false`, `dueDate: null`) are populated, and the unified state is saved to `taskflow_data`.
 4. If storage access throws or is blocked (e.g., private browsing restriction), an in-memory session store takes over as a fallback.
+5. `importAppStateJSON()` implements defensive transactional validation:
+   - Root structure verification (object with `tasks` array, or legacy `Task[]` array).
+   - Schema version bounds check (current: `version 1`).
+   - Duplicate ID collision detection (rejects corrupted backups containing conflicting IDs).
+   - Strict preferences sanitisation (bounds-checking for theme, filter, category, and sortBy).
+   - Task cleansing and length clamping.
+   - If validation fails or storage write fails, existing state is strictly preserved without modification.
 
 ---
 
 ## DOM Safety & Security
 
 - **Strict XSS Prevention**: All user input (`title`, `description`, `category`) is injected via `textContent` or dedicated DOM nodes (`document.createElement`). `innerHTML` is never used for untrusted data.
+- **Prototype Pollution Resistance**: Backup imports and stored records use explicit property lookups and whitelisted keys rather than unchecked object merges.
 - **Zero Remote Dependencies**: The application does not load external CDN scripts, fonts, analytics, or trackers.
 - **Content Security Policy Ready**: Fully compatible with strict CSP configurations (`default-src 'self'`).
 - **No `eval` or dynamic code evaluation**: Evaluated code execution is completely prohibited.
 
 ---
 
-## Accessibility (A11y) & Usability
+## Accessibility (A11y) & Focus Management
 
 - **Semantic Landmarks**: Uses `<header>`, `<nav>`, `<main>`, `<aside>`, and `<footer>` elements.
-- **Accessible Modals**: Implements `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and keyboard focus trapping with `Escape` to close.
-- **Screen Reader Announcements**: Live region (`#live-announcer`) with `aria-live="polite"` announces task addition, status changes, deletions, and filter counts.
+- **Accessible Dialogs & Focus Trapping**:
+  - Implements `role="dialog"` (and `role="alertdialog"` for confirmations), `aria-modal="true"`, `aria-labelledby`, and `aria-describedby`.
+  - Background elements (`.app-layout`) are dynamically set to `aria-hidden="true"` while dialogs are open to prevent background screen-reader interaction.
+  - Active focus is trapped via `trapFocus()`: `Tab` wraps from the last focusable element to the first, and `Shift + Tab` wraps from first to last.
+  - The `Escape` key closes active dialogs in hierarchical priority order.
+  - Upon dialog closure, keyboard focus is reliably restored to the specific element that invoked the dialog.
+- **Screen Reader Announcements**: Live region (`#toast-container` and stats counters) with `aria-live="polite"` announces task addition, status changes, deletions, and filter counts.
 - **Keyboard Navigation**: Full tab order traversal, skip-navigation link (`#skip-link`), and focus preservation upon modal dismissal.
 - **High-Contrast & Reduced-Motion**: Honors `prefers-reduced-motion: reduce` and `forced-colors: active` system preferences.
+
+---
+
+## Known Limitations
+
+- **Client-Side Scope**: TaskFlow is intentionally built as an offline-first client application. It does not provide real-time multi-device cloud synchronization or server-side authentication.
+- **Browser Storage Quota**: LocalStorage typically provides up to 5MB of storage per origin. When storage quota is exhausted, TaskFlow warns the user and temporarily utilizes an in-memory session store.
+- **Device-Bound Data**: Data resides in the local browser profile. Users must export offline JSON backups to migrate their tasks between devices or browsers.

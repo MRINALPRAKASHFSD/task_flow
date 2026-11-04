@@ -71,6 +71,8 @@ function rawSet(key, value) {
     }
   } catch (err) {
     console.warn('[TaskFlow] localStorage write failed, using in-memory store:', err.message);
+    memoryStore.set(key, value);
+    return false;
   }
   memoryStore.set(key, value);
   return true;
@@ -148,8 +150,8 @@ function storageRemove(key) {
  */
 export function validateTaskRecord(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  if (!raw.id || typeof raw.id !== 'string') return null;
-  if (!raw.title || typeof raw.title !== 'string') return null;
+  if (!Object.prototype.hasOwnProperty.call(raw, 'id') || !raw.id || typeof raw.id !== 'string') return null;
+  if (!Object.prototype.hasOwnProperty.call(raw, 'title') || !raw.title || typeof raw.title !== 'string') return null;
 
   const title = raw.title.trim().slice(0, 200);
   if (!title) return null;
@@ -267,13 +269,12 @@ export function saveAppState(state) {
     },
   };
 
-  const success = storageSet(STORAGE_KEYS.DATA, payload);
-  // Also keep legacy keys in sync for backward compatibility
-  storageSet(STORAGE_KEYS.TASKS, payload.tasks);
+  const successData = storageSet(STORAGE_KEYS.DATA, payload);
+  const successTasks = storageSet(STORAGE_KEYS.TASKS, payload.tasks);
   storageSet(STORAGE_KEYS.THEME, payload.preferences.theme);
   storageSet(STORAGE_KEYS.FILTER, payload.preferences.filter);
 
-  return success;
+  return successData && successTasks;
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -398,37 +399,104 @@ export function importAppStateJSON(jsonString) {
     return { success: false, error: 'Empty or invalid JSON content.' };
   }
 
+  let parsed;
   try {
-    const parsed = JSON.parse(jsonString);
-    if (!parsed || typeof parsed !== 'object') {
-      return { success: false, error: 'JSON root must be an object or array.' };
-    }
-
-    const rawTasks = Array.isArray(parsed.tasks)
-      ? parsed.tasks
-      : (Array.isArray(parsed) ? parsed : []);
-
-    const cleansed = cleanseTaskList(rawTasks);
-
-    const preferences = (parsed.preferences && typeof parsed.preferences === 'object')
-      ? {
-          theme: parsed.preferences.theme === 'dark' ? 'dark' : 'light',
-          filter: typeof parsed.preferences.filter === 'string' ? parsed.preferences.filter : 'all',
-          sortBy: typeof parsed.preferences.sortBy === 'string' ? parsed.preferences.sortBy : 'newest',
-          category: typeof parsed.preferences.category === 'string' ? parsed.preferences.category : 'all',
-        }
-      : undefined;
-
-    saveAppState({
-      version: CURRENT_SCHEMA_VERSION,
-      tasks: cleansed,
-      preferences,
-    });
-
-    return { success: true, count: cleansed.length };
+    parsed = JSON.parse(jsonString);
   } catch (err) {
     return { success: false, error: 'Invalid JSON file: ' + err.message };
   }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return { success: false, error: 'JSON root must be an object or array.' };
+  }
+
+  let rawTasks;
+  let rawPreferences;
+
+  if (Array.isArray(parsed)) {
+    // Intentionally documented legacy import format: plain array of tasks
+    rawTasks = parsed;
+    rawPreferences = undefined;
+  } else {
+    // Root is an object: must contain a 'tasks' property
+    if (!Object.prototype.hasOwnProperty.call(parsed, 'tasks') || parsed.tasks === undefined) {
+      return { success: false, error: 'Backup is missing required "tasks" array.' };
+    }
+    if (!Array.isArray(parsed.tasks)) {
+      return { success: false, error: '"tasks" property must be an array.' };
+    }
+
+    // Validate version if present
+    if (Object.prototype.hasOwnProperty.call(parsed, 'version') && parsed.version !== undefined) {
+      if (typeof parsed.version !== 'number' || parsed.version < 1 || parsed.version > CURRENT_SCHEMA_VERSION) {
+        return {
+          success: false,
+          error: `Unsupported schema version: ${parsed.version}. Current supported version is ${CURRENT_SCHEMA_VERSION}.`,
+        };
+      }
+    }
+
+    rawTasks = parsed.tasks;
+    rawPreferences = parsed.preferences;
+  }
+
+  // Validate duplicate IDs
+  const seenIds = new Set();
+  for (const raw of rawTasks) {
+    if (raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'id') && raw.id !== undefined && raw.id !== null) {
+      const strId = String(raw.id);
+      if (seenIds.has(strId)) {
+        return {
+          success: false,
+          error: `Duplicate task ID detected in backup: "${strId}".`,
+        };
+      }
+      seenIds.add(strId);
+    }
+  }
+
+  // Validate preferences if provided
+  let validatedPreferences;
+  if (rawPreferences !== undefined) {
+    if (typeof rawPreferences !== 'object' || rawPreferences === null || Array.isArray(rawPreferences)) {
+      return { success: false, error: 'Preferences must be an object.' };
+    }
+
+    const validFilters = ['all', 'pending', 'completed', 'today', 'upcoming', 'overdue', 'high'];
+    const validSorts = ['default', 'newest', 'oldest', 'priority', 'dueDate', 'updated'];
+
+    validatedPreferences = {
+      theme: rawPreferences.theme === 'dark' ? 'dark' : 'light',
+      filter: validFilters.includes(rawPreferences.filter) ? rawPreferences.filter : 'all',
+      sortBy: validSorts.includes(rawPreferences.sortBy) ? rawPreferences.sortBy : 'newest',
+      category: (typeof rawPreferences.category === 'string' && rawPreferences.category.trim())
+        ? rawPreferences.category.trim().slice(0, 50)
+        : 'all',
+    };
+  }
+
+  // Cleanse all task records
+  const cleansed = cleanseTaskList(rawTasks);
+
+  // Prevent malformed backups (where tasks were supplied but none were valid) from wiping out data
+  if (rawTasks.length > 0 && cleansed.length === 0) {
+    return { success: false, error: 'All task records in the backup are malformed or invalid.' };
+  }
+
+  // Retrieve current preferences as fallback if preferences were omitted
+  const current = loadAppState();
+  const stateToPersist = {
+    version: CURRENT_SCHEMA_VERSION,
+    tasks: cleansed,
+    preferences: validatedPreferences || current.preferences,
+  };
+
+  const saveSuccess = saveAppState(stateToPersist);
+  if (!saveSuccess) {
+    return { success: false, error: 'Storage write failure: unable to persist imported data.' };
+  }
+
+  return { success: true, count: cleansed.length };
 }
 
 // ─── Memory Store Clear ───────────────────────────────────────────────────────

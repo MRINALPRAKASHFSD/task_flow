@@ -47,6 +47,7 @@ import {
   formatDueDate,
   formatHeaderDate,
   getGreeting,
+  trapFocus,
 } from './utils.js';
 
 // ─── Application State ────────────────────────────────────────────────────────
@@ -244,6 +245,29 @@ function persistState() {
   });
 }
 
+// ─── Dialog Focus & Background Management ────────────────────────────────────
+
+let confirmInvokingElement = null;
+let settingsInvokingElement = null;
+let modalInvokingElement = null;
+
+function setBackgroundInert(inert) {
+  const layout = document.querySelector('.app-layout');
+  if (!layout) return;
+  if (inert) {
+    layout.setAttribute('aria-hidden', 'true');
+  } else {
+    // Only remove aria-hidden if NO modal/dialog is currently open
+    const isAnyOpen =
+      (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) ||
+      (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) ||
+      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open'));
+    if (!isAnyOpen) {
+      layout.removeAttribute('aria-hidden');
+    }
+  }
+}
+
 // ─── Confirmation Modal ───────────────────────────────────────────────────────
 
 let _confirmResolve = null;
@@ -251,14 +275,33 @@ let _confirmResolve = null;
 function showConfirm(message) {
   return new Promise((resolve) => {
     _confirmResolve = resolve;
+    confirmInvokingElement = document.activeElement;
     setText(dom.confirmMessage, message);
     dom.confirmOverlay.classList.add('is-open');
-    dom.btnConfirmOk.focus();
+    dom.confirmOverlay.setAttribute('aria-hidden', 'false');
+    setBackgroundInert(true);
+    // Focus Cancel first to prevent accidental confirmation via Enter
+    if (dom.btnConfirmCancel) {
+      dom.btnConfirmCancel.focus();
+    } else if (dom.btnConfirmOk) {
+      dom.btnConfirmOk.focus();
+    }
   });
 }
 
 function closeConfirm(result) {
   dom.confirmOverlay.classList.remove('is-open');
+  dom.confirmOverlay.setAttribute('aria-hidden', 'true');
+  setBackgroundInert(false);
+
+  // Restore focus to invoking element if still connected and settings is not active
+  if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) {
+    if (dom.btnClearCompleted) dom.btnClearCompleted.focus();
+  } else if (confirmInvokingElement && typeof confirmInvokingElement.focus === 'function') {
+    confirmInvokingElement.focus();
+  }
+  confirmInvokingElement = null;
+
   if (_confirmResolve) {
     _confirmResolve(result);
     _confirmResolve = null;
@@ -269,8 +312,10 @@ function closeConfirm(result) {
 
 function openSettings() {
   if (!dom.settingsOverlay) return;
+  settingsInvokingElement = document.activeElement;
   dom.settingsOverlay.classList.add('is-open');
   dom.settingsOverlay.setAttribute('aria-hidden', 'false');
+  setBackgroundInert(true);
   if (dom.settingsClose) dom.settingsClose.focus();
 }
 
@@ -278,14 +323,22 @@ function closeSettings() {
   if (!dom.settingsOverlay) return;
   dom.settingsOverlay.classList.remove('is-open');
   dom.settingsOverlay.setAttribute('aria-hidden', 'true');
-  if (dom.sidebarSettings) dom.sidebarSettings.focus();
+  setBackgroundInert(false);
+
+  if (settingsInvokingElement && typeof settingsInvokingElement.focus === 'function') {
+    settingsInvokingElement.focus();
+  } else if (dom.sidebarSettings) {
+    dom.sidebarSettings.focus();
+  }
+  settingsInvokingElement = null;
 }
 
 function handleExportJSON() {
+  let url = null;
   try {
     const jsonStr = exportAppStateJSON();
     const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const dateStamp = new Date().toISOString().slice(0, 10);
     a.href = url;
@@ -293,16 +346,30 @@ function handleExportJSON() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
     showToast('Tasks exported successfully.', 'success');
   } catch (err) {
     showToast('Failed to export tasks: ' + err.message, 'error');
+  } finally {
+    if (url) {
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (_e) {}
+      }, 1000);
+    }
   }
 }
 
 function handleImportJSON(e) {
   const file = e.target.files?.[0];
   if (!file) return;
+
+  // Enforce size limit (max 5MB to prevent memory exhaustion)
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Selected file exceeds 5MB limit. Please choose a valid JSON backup.', 'error');
+    if (dom.importFileInput) dom.importFileInput.value = '';
+    return;
+  }
 
   const reader = new FileReader();
   reader.onload = (event) => {
@@ -332,6 +399,10 @@ function handleImportJSON(e) {
     } finally {
       if (dom.importFileInput) dom.importFileInput.value = '';
     }
+  };
+  reader.onerror = () => {
+    showToast('Error reading uploaded file.', 'error');
+    if (dom.importFileInput) dom.importFileInput.value = '';
   };
   reader.readAsText(file);
 }
@@ -377,13 +448,12 @@ async function handleResetAllTasks() {
 
 // ─── Task Modal Dialog ────────────────────────────────────────────────────────
 
-let lastFocusedElement = null;
-
 function openModal(title) {
-  lastFocusedElement = document.activeElement;
+  modalInvokingElement = document.activeElement;
   setText(dom.modalTitle, title);
   dom.modalOverlay.classList.add('is-open');
   dom.modalOverlay.setAttribute('aria-hidden', 'false');
+  setBackgroundInert(true);
   clearFormErrors();
   dom.fieldTitle.focus();
 }
@@ -391,12 +461,14 @@ function openModal(title) {
 function closeModal() {
   dom.modalOverlay.classList.remove('is-open');
   dom.modalOverlay.setAttribute('aria-hidden', 'true');
+  setBackgroundInert(false);
   resetForm();
   state.editingId = null;
   state.isSubmitting = false;
-  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
-    lastFocusedElement.focus();
+  if (modalInvokingElement && typeof modalInvokingElement.focus === 'function') {
+    modalInvokingElement.focus();
   }
+  modalInvokingElement = null;
 }
 
 function resetForm() {
@@ -1006,13 +1078,42 @@ function wireEvents() {
   if (dom.btnClearCompleted) dom.btnClearCompleted.addEventListener('click', handleClearCompletedTasks);
   if (dom.btnClearAll) dom.btnClearAll.addEventListener('click', handleResetAllTasks);
 
-  // Keyboard navigation: Escape key closes active modals
+  // Keyboard navigation: Escape key closes active modals, Tab traps focus
   document.addEventListener('keydown', (e) => {
+    // 1. Priority order for Escape: topmost dialog closes first
     if (e.key === 'Escape') {
-      if (dom.modalOverlay.classList.contains('is-open')) closeModal();
-      if (dom.confirmOverlay.classList.contains('is-open')) closeConfirm(false);
-      if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) closeSettings();
-      if (dom.appSidebar.classList.contains('is-open')) closeMobileNav();
+      if (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) {
+        closeConfirm(false);
+        return;
+      }
+      if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) {
+        closeSettings();
+        return;
+      }
+      if (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) {
+        closeModal();
+        return;
+      }
+      if (dom.appSidebar && dom.appSidebar.classList.contains('is-open')) {
+        closeMobileNav();
+        return;
+      }
+    }
+
+    // 2. Focus trapping on Tab and Shift + Tab
+    if (e.key === 'Tab') {
+      if (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) {
+        trapFocus(e, dom.confirmOverlay);
+        return;
+      }
+      if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) {
+        trapFocus(e, dom.settingsOverlay);
+        return;
+      }
+      if (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) {
+        trapFocus(e, dom.modalOverlay);
+        return;
+      }
     }
   });
 }

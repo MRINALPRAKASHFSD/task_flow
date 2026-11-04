@@ -319,4 +319,148 @@ describe('exportAppStateJSON / importAppStateJSON', () => {
     assert.equal(res.success, true);
     assert.equal(res.count, 1);
   });
+
+  test('importAppStateJSON rejects empty JSON string', () => {
+    assert.equal(importAppStateJSON('').success, false);
+    assert.equal(importAppStateJSON('   ').success, false);
+    assert.equal(importAppStateJSON(null).success, false);
+  });
+
+  test('importAppStateJSON rejects empty objects', () => {
+    const res = importAppStateJSON('{}');
+    assert.equal(res.success, false);
+    assert.match(res.error, /missing required "tasks"/i);
+  });
+
+  test('importAppStateJSON rejects missing tasks property in objects', () => {
+    const res = importAppStateJSON(JSON.stringify({ preferences: { theme: 'dark' } }));
+    assert.equal(res.success, false);
+    assert.match(res.error, /missing required "tasks"/i);
+  });
+
+  test('importAppStateJSON rejects invalid tasks type', () => {
+    const resString = importAppStateJSON(JSON.stringify({ tasks: 'not-an-array' }));
+    assert.equal(resString.success, false);
+    assert.match(resString.error, /"tasks" property must be an array/i);
+
+    const resNumber = importAppStateJSON(JSON.stringify({ tasks: 42 }));
+    assert.equal(resNumber.success, false);
+    assert.match(resNumber.error, /"tasks" property must be an array/i);
+  });
+
+  test('importAppStateJSON rejects unsupported schema versions', () => {
+    const resHigh = importAppStateJSON(JSON.stringify({ version: 999, tasks: [] }));
+    assert.equal(resHigh.success, false);
+    assert.match(resHigh.error, /unsupported schema version/i);
+
+    const resZero = importAppStateJSON(JSON.stringify({ version: 0, tasks: [] }));
+    assert.equal(resZero.success, false);
+    assert.match(resZero.error, /unsupported schema version/i);
+  });
+
+  test('importAppStateJSON rejects backups with duplicate task IDs', () => {
+    const payload = JSON.stringify({
+      version: 1,
+      tasks: [
+        { id: 'task-100', title: 'First Task' },
+        { id: 'task-100', title: 'Duplicate Task' }
+      ]
+    });
+    const res = importAppStateJSON(payload);
+    assert.equal(res.success, false);
+    assert.match(res.error, /duplicate task id detected/i);
+  });
+
+  test('importAppStateJSON rejects backup if all task records are malformed', () => {
+    const payload = JSON.stringify({
+      version: 1,
+      tasks: [
+        null,
+        { missingTitle: true },
+        123
+      ]
+    });
+    const res = importAppStateJSON(payload);
+    assert.equal(res.success, false);
+    assert.match(res.error, /all task records in the backup are malformed/i);
+  });
+
+  test('importAppStateJSON handles storage write failure gracefully', () => {
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = () => {
+      throw new Error('QuotaExceededError: LocalStorage quota exceeded');
+    };
+
+    try {
+      const payload = JSON.stringify({
+        version: 1,
+        tasks: [{ id: 'write-fail-test', title: 'Valid Task' }]
+      });
+      const res = importAppStateJSON(payload);
+      assert.equal(res.success, false);
+      assert.match(res.error, /storage write failure/i);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('importAppStateJSON preserves existing data after rejected imports', () => {
+    // 1. Establish valid baseline state
+    saveAppState({
+      version: 1,
+      tasks: [
+        {
+          id: 'initial-task-1',
+          title: 'Preserved Task 1',
+          description: 'Must not be overwritten',
+          priority: 'high',
+          category: 'Work',
+          status: 'pending',
+          completed: false,
+          dueDate: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ],
+      preferences: {
+        theme: 'light',
+        filter: 'all',
+        sortBy: 'newest',
+        category: 'Work'
+      }
+    });
+
+    const baseline = loadAppState();
+    assert.equal(baseline.tasks.length, 1);
+    assert.equal(baseline.tasks[0].id, 'initial-task-1');
+
+    // 2. Attempt empty object
+    const resEmpty = importAppStateJSON('{}');
+    assert.equal(resEmpty.success, false);
+    assert.equal(loadAppState().tasks[0].id, 'initial-task-1');
+
+    // 3. Attempt duplicate ID
+    const resDup = importAppStateJSON(JSON.stringify({
+      version: 1,
+      tasks: [
+        { id: 'dup-x', title: 'Task A' },
+        { id: 'dup-x', title: 'Task B' }
+      ]
+    }));
+    assert.equal(resDup.success, false);
+    assert.equal(loadAppState().tasks[0].id, 'initial-task-1');
+
+    // 4. Attempt unsupported schema version
+    const resVersion = importAppStateJSON(JSON.stringify({
+      version: 42,
+      tasks: [{ id: 'bad-ver', title: 'Future task' }]
+    }));
+    assert.equal(resVersion.success, false);
+    assert.equal(loadAppState().tasks[0].id, 'initial-task-1');
+
+    // 5. Attempt invalid tasks type
+    const resType = importAppStateJSON(JSON.stringify({ tasks: 'not an array' }));
+    assert.equal(resType.success, false);
+    assert.equal(loadAppState().tasks[0].id, 'initial-task-1');
+  });
 });

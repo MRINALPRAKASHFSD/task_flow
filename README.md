@@ -2,11 +2,11 @@
 
 > **Plan smarter. Stay organized. Get things done.**
 
-[![CI](https://github.com/MRINALPRAKASHFSD/taskflow/actions/workflows/ci.yml/badge.svg)](https://github.com/MRINALPRAKASHFSD/taskflow/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/MRINALPRAKASHFSD/taskflow/actions/workflows/codeql.yml/badge.svg)](https://github.com/MRINALPRAKASHFSD/taskflow/actions/workflows/codeql.yml)
+[![CI](https://github.com/MRINALPRAKASHFSD/task_flow/actions/workflows/ci.yml/badge.svg)](https://github.com/MRINALPRAKASHFSD/task_flow/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/MRINALPRAKASHFSD/task_flow/actions/workflows/codeql.yml/badge.svg)](https://github.com/MRINALPRAKASHFSD/task_flow/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs: CC BY 4.0](https://img.shields.io/badge/Docs-CC%20BY%204.0-lightgrey.svg)](docs/LICENSE-CC-BY-4.0)
-[![GitHub Template](https://img.shields.io/badge/GitHub-Template%20Repository-8A2BE2)](https://github.com/MRINALPRAKASHFSD/taskflow/generate)
+[![GitHub Template](https://img.shields.io/badge/GitHub-Template%20Repository-8A2BE2)](https://github.com/MRINALPRAKASHFSD/task_flow/generate)
 
 TaskFlow is a lightweight, dependency-free to-do manager built with HTML5, CSS3 and Vanilla JavaScript.
 It runs entirely in the browser, persists data in LocalStorage, and requires no build step, no server and no framework.
@@ -75,8 +75,8 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 No installation required. Clone or download the repository and open `index.html`:
 
 ```bash
-git clone https://github.com/MRINALPRAKASHFSD/taskflow.git
-cd taskflow
+git clone https://github.com/MRINALPRAKASHFSD/task_flow.git
+cd task_flow
 open index.html        # macOS
 start index.html       # Windows
 xdg-open index.html    # Linux
@@ -87,8 +87,8 @@ xdg-open index.html    # Linux
 If you need module imports to resolve correctly over HTTP (some browsers block ES modules from `file://`):
 
 ```bash
-git clone https://github.com/MRINALPRAKASHFSD/taskflow.git
-cd taskflow
+git clone https://github.com/MRINALPRAKASHFSD/task_flow.git
+cd task_flow
 npm start
 # Open http://localhost:8080
 ```
@@ -149,9 +149,13 @@ taskflow/
 │   ├── filters.js          Filter and sort logic
 │   └── utils.js            Shared utility helpers (ID generation, date formatting, etc.)
 ├── tests/
-│   ├── tasks.test.js       112 unit tests across all modules
-│   ├── filters.test.js
-│   └── storage.test.js
+│   ├── tasks.test.js       Task model, CRUD operations, deadlines, and stats
+│   ├── filters.test.js     Filtering, search matching, and sorting logic
+│   ├── storage.test.js     LocalStorage, schema versioning, and JSON import/export
+│   └── accessibility.test.js Focusable selectors, focus trapping, and modal a11y
+└── scripts/
+    ├── check-syntax.js     Cross-platform Node.js syntax verification
+    └── lint.js             Zero-dependency static style and safety linter
 └── docs/
     ├── ARCHITECTURE.md     Detailed architecture documentation
     ├── USER_GUIDE.md       End-user documentation
@@ -192,7 +196,7 @@ taskflow/
 ## Testing
 
 ```bash
-# Run full verification (syntax checks + 108 unit tests)
+# Run full verification (syntax checks + static linter + 127 unit tests)
 npm run check
 
 # Run all unit tests
@@ -202,6 +206,7 @@ npm test
 npm run test:tasks
 npm run test:filters
 npm run test:storage
+npm run test:accessibility
 
 # Watch mode (re-runs on file change)
 npm run test:watch
@@ -226,7 +231,7 @@ Key points:
 ## Security
 
 Please do **not** report security vulnerabilities as public GitHub issues.
-Use [GitHub Security Advisories](https://github.com/MRINALPRAKASHFSD/taskflow/security/advisories/new).
+Use [GitHub Security Advisories](https://github.com/MRINALPRAKASHFSD/task_flow/security/advisories/new).
 
 See [SECURITY.md](SECURITY.md) for the full policy.
 
@@ -265,7 +270,7 @@ GitHub: [@MRINALPRAKASHFSD](https://github.com/MRINALPRAKASHFSD)
 ## Using as a Template
 
 TaskFlow is configured as a **GitHub Template Repository**.
-Click [**Use this template**](https://github.com/MRINALPRAKASHFSD/taskflow/generate) to create a new
+Click [**Use this template**](https://github.com/MRINALPRAKASHFSD/task_flow/generate) to create a new
 repository with all files but a clean, unrelated Git history.
 
 ---

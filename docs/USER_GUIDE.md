@@ -139,14 +139,17 @@ Access the Settings modal by clicking **⚙️ Settings** in the sidebar.
 
 - **Theme Preferences**: Switch between Light and Dark themes anytime.
 - **Export Tasks (JSON)**: Download a local timestamped backup of your tasks (`taskflow-backup-YYYY-MM-DD.json`).
-- **Import Tasks (JSON)**: Restore tasks from a previously saved backup file. Imported tasks are validated and sanitized automatically.
-- **Clear Completed Tasks**: Remove all completed tasks while keeping pending work intact.
-- **Reset All Tasks**: Clear all tasks and reset your dashboard back to an empty state.
+- **Import Tasks (JSON)**: Restore tasks from a previously saved backup file.
+  - Files are defensively checked: empty JSON, unsupported versions, duplicate task IDs, and malformed files are safely rejected.
+  - Your existing tasks are protected and preserved if an imported file fails validation.
+- **Clear Completed Tasks**: Remove all completed tasks while keeping pending work intact. Requires confirmation.
+- **Reset All Tasks**: Clear all tasks and reset your dashboard back to an empty state. Requires confirmation.
 
 ---
 
-## Data Privacy & Offline Storage
+## Data Privacy, Offline Storage & Limitations
 
-- All TaskFlow data is saved locally in browser `localStorage`.
-- No tracking cookies, external analytics, or remote API queries are executed.
-- Clearing your browser site data will remove your saved tasks. We recommend backing up your tasks if clearing browser cache.
+- **Local Storage Only**: All TaskFlow data is saved locally in your browser's `localStorage`.
+- **No Remote Tracking**: No tracking cookies, external analytics, or remote API queries are executed.
+- **Device & Browser Isolation**: Tasks are stored within your specific browser profile. To transfer tasks to another device or browser, export a JSON backup and import it on the target system.
+- **Storage Quota**: Web browsers allocate limited storage (typically around 5MB) per website origin. For typical task lists this is more than sufficient, but exporting periodic JSON backups is strongly recommended before clearing browser data.
