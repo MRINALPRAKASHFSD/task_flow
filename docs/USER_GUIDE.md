@@ -121,10 +121,12 @@ Switch between 5 sorting strategies via the Sort dropdown:
 
 | Key Combination | Action |
 |---|---|
-| `Tab` | Advance focus to next interactive element |
+| `/` | Instant jump & focus to search input (from anywhere outside text fields) |
+| `N` / `n` | Quick open New Task dialog (when outside text inputs) |
+| `Tab` | Advance focus to next interactive element (trapped within active dialogs) |
 | `Shift + Tab` | Move focus to previous interactive element |
 | `Enter` / `Space` | Toggle checkboxes, open modals, trigger buttons |
-| `Escape` | Dismiss open dialogs, clear search input, or close mobile drawer |
+| `Escape` | Dismiss active dialogs (topmost first), clear search, or close mobile drawer |
 
 - **Skip Navigation**: Press `Tab` upon initial page load to reveal the "Skip to main content" link.
 - **Screen Reader Announcements**: An `aria-live="polite"` announcer reports task additions, deletions, completions, and filter transitions.

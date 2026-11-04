@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/responsive.css" />
 
-  <!-- Favicon (inline SVG data URI — zero external dependency) -->
+  <!-- Favicon (inline SVG data URI) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M8 10h16M8 16h10M8 22h12' stroke='white' stroke-width='2.5' stroke-linecap='round'/></svg>" />
 </head>
 <body>
@@ -39,7 +39,7 @@
   <div class="app-layout">
 
     <!-- ====================================================
-         HEADER
+         APP HEADER
          ==================================================== -->
     <header class="app-header" role="banner">
       <div class="header-left">
@@ -51,11 +51,21 @@
           aria-expanded="false"
           aria-controls="app-sidebar"
         >
-          <span aria-hidden="true">☰</span>
+          <svg class="tf-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
         </button>
 
         <a href="#" class="header-brand" aria-label="TaskFlow home">
-          <div class="header-brand__logo" aria-hidden="true">T</div>
+          <div class="header-brand__logo" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
           <div>
             <div class="header-brand__name">TaskFlow</div>
             <div class="header-brand__tagline">Plan smarter. Stay organized.</div>
@@ -70,7 +80,11 @@
           type="button"
           aria-label="Quick add task"
         >
-          <span aria-hidden="true">+</span> New Task
+          <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Task</span>
         </button>
 
         <button
@@ -78,10 +92,19 @@
           class="theme-toggle"
           type="button"
           aria-label="Switch to dark theme"
-          title="Toggle theme"
+          title="Toggle theme (Light / Dark)"
         >
-          <span id="theme-icon" aria-hidden="true">🌙</span>
+          <span id="theme-icon" class="theme-icon-container" aria-hidden="true">
+            <svg class="tf-icon theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </span>
         </button>
+
+        <!-- User profile chip (Local workspace indication, zero authentication) -->
+        <div class="header-user-chip" title="Mrinal Prakash · TaskFlow Local">
+          <div class="user-avatar" aria-hidden="true">MP</div>
+        </div>
       </div>
     </header>
 
@@ -104,7 +127,12 @@
                 aria-current="page"
                 aria-label="Show all tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">📋</span>
+                <span class="sidebar-nav__icon-wrap" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">All Tasks</span>
                 <span id="sidebar-badge-all" class="sidebar-nav__badge" aria-label="total tasks count">0</span>
               </button>
@@ -119,7 +147,15 @@
                 aria-current="false"
                 aria-label="Show tasks due today"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">📅</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--amber" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <circle cx="12" cy="15" r="2"></circle>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Today</span>
                 <span id="sidebar-badge-today" class="sidebar-nav__badge" aria-label="today tasks count">0</span>
               </button>
@@ -134,7 +170,15 @@
                 aria-current="false"
                 aria-label="Show upcoming tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">🗓️</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--blue" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <polyline points="9 15 12 18 15 15"></polyline>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Upcoming</span>
                 <span id="sidebar-badge-upcoming" class="sidebar-nav__badge" aria-label="upcoming tasks count">0</span>
               </button>
@@ -149,7 +193,13 @@
                 aria-current="false"
                 aria-label="Show overdue tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">⚠️</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--red" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Overdue</span>
                 <span id="sidebar-badge-overdue" class="sidebar-nav__badge sidebar-nav__badge--danger" aria-label="overdue tasks count">0</span>
               </button>
@@ -164,7 +214,12 @@
                 aria-current="false"
                 aria-label="Show pending tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">⏳</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--amber" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Pending</span>
                 <span id="sidebar-badge-pending" class="sidebar-nav__badge" aria-label="pending tasks count">0</span>
               </button>
@@ -179,7 +234,12 @@
                 aria-current="false"
                 aria-label="Show completed tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">✅</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--emerald" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Completed</span>
                 <span id="sidebar-badge-completed" class="sidebar-nav__badge" aria-label="completed tasks count">0</span>
               </button>
@@ -194,7 +254,11 @@
                 aria-current="false"
                 aria-label="Show high priority tasks"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">🔴</span>
+                <span class="sidebar-nav__icon-wrap sidebar-nav__icon-wrap--coral" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">High Priority</span>
                 <span id="sidebar-badge-high" class="sidebar-nav__badge" aria-label="high priority count">0</span>
               </button>
@@ -213,7 +277,11 @@
                 data-category="all"
                 aria-label="Show all categories"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">📁</span>
+                <span class="sidebar-nav__icon-wrap" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">All Categories</span>
                 <span id="cat-badge-all" class="sidebar-nav__badge">0</span>
               </button>
@@ -225,7 +293,7 @@
                 data-category="Work"
                 aria-label="Filter by Work category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--work" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--work" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">Work</span>
                 <span id="cat-badge-Work" class="sidebar-nav__badge">0</span>
               </button>
@@ -237,7 +305,7 @@
                 data-category="Personal"
                 aria-label="Filter by Personal category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--personal" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--personal" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">Personal</span>
                 <span id="cat-badge-Personal" class="sidebar-nav__badge">0</span>
               </button>
@@ -249,7 +317,7 @@
                 data-category="Study"
                 aria-label="Filter by Study category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--study" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--study" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">Study</span>
                 <span id="cat-badge-Study" class="sidebar-nav__badge">0</span>
               </button>
@@ -261,7 +329,7 @@
                 data-category="Health"
                 aria-label="Filter by Health category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--health" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--health" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">Health</span>
                 <span id="cat-badge-Health" class="sidebar-nav__badge">0</span>
               </button>
@@ -273,7 +341,7 @@
                 data-category="Finance"
                 aria-label="Filter by Finance category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--finance" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--finance" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">Finance</span>
                 <span id="cat-badge-Finance" class="sidebar-nav__badge">0</span>
               </button>
@@ -285,7 +353,7 @@
                 data-category="General"
                 aria-label="Filter by General category"
               >
-                <span class="sidebar-nav__icon cat-dot cat-dot--general" aria-hidden="true">●</span>
+                <span class="cat-dot cat-dot--general" aria-hidden="true"></span>
                 <span class="sidebar-nav__label">General</span>
                 <span id="cat-badge-General" class="sidebar-nav__badge">0</span>
               </button>
@@ -304,18 +372,26 @@
                 class="sidebar-nav__link"
                 aria-label="Open settings and data management"
               >
-                <span class="sidebar-nav__icon" aria-hidden="true">⚙️</span>
+                <span class="sidebar-nav__icon-wrap" aria-hidden="true">
+                  <svg class="tf-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </span>
                 <span class="sidebar-nav__label">Settings</span>
               </button>
             </li>
           </ul>
         </div>
 
-        <!-- Sidebar footer info -->
+        <!-- Sidebar footer info with local workspace user card -->
         <div class="sidebar-footer">
-          <div class="sidebar-footer__text">
-            <span>TaskFlow v1.0.0</span>
-            <span class="text-muted">· Local & Private</span>
+          <div class="sidebar-user-card">
+            <div class="sidebar-user-avatar" aria-hidden="true">MP</div>
+            <div class="sidebar-user-meta">
+              <span class="sidebar-user-name">Mrinal Prakash</span>
+              <span class="sidebar-user-status">Local & Private · v1.0.0</span>
+            </div>
           </div>
         </div>
 
@@ -342,7 +418,15 @@
           <div class="stats-grid">
 
             <div class="stat-card stat-card--total" role="region" aria-label="Total tasks">
-              <div class="stat-card__icon" aria-hidden="true">📋</div>
+              <div class="stat-card__icon" aria-hidden="true">
+                <svg class="tf-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
               <div class="stat-card__body">
                 <div id="stat-total" class="stat-card__value" aria-live="polite">0</div>
                 <div class="stat-card__label">Total Tasks</div>
@@ -350,7 +434,12 @@
             </div>
 
             <div class="stat-card stat-card--pending" role="region" aria-label="Pending tasks">
-              <div class="stat-card__icon" aria-hidden="true">⏳</div>
+              <div class="stat-card__icon" aria-hidden="true">
+                <svg class="tf-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
               <div class="stat-card__body">
                 <div id="stat-pending" class="stat-card__value" aria-live="polite">0</div>
                 <div class="stat-card__label">Pending</div>
@@ -358,7 +447,12 @@
             </div>
 
             <div class="stat-card stat-card--completed" role="region" aria-label="Completed tasks">
-              <div class="stat-card__icon" aria-hidden="true">✅</div>
+              <div class="stat-card__icon" aria-hidden="true">
+                <svg class="tf-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
               <div class="stat-card__body">
                 <div id="stat-completed" class="stat-card__value" aria-live="polite">0</div>
                 <div class="stat-card__label">Completed</div>
@@ -366,7 +460,13 @@
             </div>
 
             <div class="stat-card stat-card--overdue" role="region" aria-label="Overdue tasks">
-              <div class="stat-card__icon" aria-hidden="true">⚠️</div>
+              <div class="stat-card__icon" aria-hidden="true">
+                <svg class="tf-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
               <div class="stat-card__body">
                 <div id="stat-overdue" class="stat-card__value" aria-live="polite">0</div>
                 <div class="stat-card__label">Overdue</div>
@@ -374,7 +474,11 @@
             </div>
 
             <div class="stat-card stat-card--high" role="region" aria-label="High priority pending tasks">
-              <div class="stat-card__icon" aria-hidden="true">🔴</div>
+              <div class="stat-card__icon" aria-hidden="true">
+                <svg class="tf-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </div>
               <div class="stat-card__body">
                 <div id="stat-high-priority" class="stat-card__value" aria-live="polite">0</div>
                 <div class="stat-card__label">High Priority</div>
@@ -383,10 +487,16 @@
 
           </div>
 
-          <!-- Completion progress bar -->
+          <!-- Completion progress card -->
           <div class="progress-container">
             <div class="progress-header">
-              <span class="progress-title">Completion Progress</span>
+              <div class="progress-title-wrap">
+                <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+                <span class="progress-title">Completion Progress</span>
+              </div>
               <span id="progress-label" class="progress-percentage">0% complete</span>
             </div>
             <div
@@ -406,29 +516,40 @@
         <section class="toolbar-section" aria-label="Search, filter and sort tasks">
           <div class="toolbar" role="search">
 
-            <!-- Search box -->
+            <!-- Search box with keyboard shortcut hint -->
             <div class="search-box">
-              <span class="search-box__icon" aria-hidden="true">🔍</span>
+              <span class="search-box__icon" aria-hidden="true">
+                <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
               <label for="search-input" class="sr-only">Search tasks</label>
               <input
                 id="search-input"
                 type="search"
                 class="search-box__input"
-                placeholder="Search by title, description or category…"
+                placeholder="Search by title, description or category… (Press /)"
                 autocomplete="off"
                 spellcheck="false"
                 aria-label="Search tasks"
               />
+              <kbd class="search-kbd" aria-hidden="true">/</kbd>
               <button
                 id="search-clear"
                 type="button"
                 class="search-box__clear"
                 aria-label="Clear search query"
                 hidden
-              >✕</button>
+              >
+                <svg class="tf-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
 
-            <!-- View filter tabs -->
+            <!-- View filter tabs (Segmented Control) -->
             <div class="filter-tabs" role="group" aria-label="Filter tasks by view">
               <button type="button" class="filter-tab is-active" data-filter="all"       aria-pressed="true">All</button>
               <button type="button" class="filter-tab"           data-filter="today"     aria-pressed="false">Today</button>
@@ -438,35 +559,49 @@
             </div>
 
             <!-- Category filter dropdown -->
-            <div class="category-select-wrapper">
+            <div class="category-select-wrapper select-wrapper">
               <label for="filter-category-select" class="sr-only">Filter by category</label>
               <select id="filter-category-select" class="form-select toolbar-select" aria-label="Filter by category">
-                <option value="all">📁 All Categories</option>
-                <option value="Work">💼 Work</option>
-                <option value="Personal">🏠 Personal</option>
-                <option value="Study">📚 Study</option>
-                <option value="Health">🏃 Health</option>
-                <option value="Finance">💰 Finance</option>
-                <option value="General">🏷️ General</option>
+                <option value="all">All Categories</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Study">Study</option>
+                <option value="Health">Health</option>
+                <option value="Finance">Finance</option>
+                <option value="General">General</option>
               </select>
+              <span class="select-chevron" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
             </div>
 
             <!-- Sort dropdown -->
-            <div class="sort-select-wrapper">
+            <div class="sort-select-wrapper select-wrapper">
               <label for="sort-select" class="sr-only">Sort tasks by</label>
               <select id="sort-select" class="form-select toolbar-select" aria-label="Sort tasks">
-                <option value="default">↕️ Default Sort</option>
-                <option value="newest">🕒 Newest First</option>
-                <option value="oldest">⏳ Oldest First</option>
-                <option value="priority">🔴 Highest Priority</option>
-                <option value="dueDate">📅 Due Date</option>
-                <option value="updated">🔄 Recently Updated</option>
+                <option value="default">Default Sort</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="priority">Highest Priority</option>
+                <option value="dueDate">Due Date</option>
+                <option value="updated">Recently Updated</option>
               </select>
+              <span class="select-chevron" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
             </div>
 
             <!-- Primary Add Task button -->
             <button id="btn-add-task" type="button" class="btn btn-primary" aria-label="Add new task">
-              <span aria-hidden="true">+</span> Add Task
+              <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Task</span>
             </button>
 
           </div>
@@ -479,48 +614,40 @@
               <h2 id="view-title" class="task-list__title">All Tasks</h2>
               <span id="view-category-badge" class="badge badge-category" hidden></span>
             </div>
-            <span id="task-count" class="task-list__count" aria-live="polite" aria-atomic="true">0 tasks</span>
+            <span id="task-count" class="task-list__count" aria-live="polite">0 tasks</span>
           </div>
 
-          <!-- Empty state placeholder -->
-          <div
-            id="empty-state"
-            class="empty-state"
-            role="status"
-            aria-live="polite"
-            hidden
-          >
-            <span class="empty-state__icon" aria-hidden="true">📭</span>
-            <h3 class="empty-state__title">No tasks yet</h3>
-            <p class="empty-state__description">
-              Add your first task to get started. Stay organised and productive!
-            </p>
-            <button id="btn-empty-add" type="button" class="btn btn-primary">
-              Add a new task
+          <!-- Empty state -->
+          <div id="empty-state" class="empty-state" role="status">
+            <div class="empty-state__icon-wrap" aria-hidden="true">
+              <svg class="tf-icon empty-state__svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <h3 class="empty-state__title">No tasks found</h3>
+            <p class="empty-state__description">Get started by creating a new task, or adjust your active filters.</p>
+            <button id="btn-empty-add" type="button" class="btn btn-primary empty-state__action">
+              <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Create Task</span>
             </button>
           </div>
 
-          <!-- Dynamic task cards container -->
-          <div
-            id="task-list"
-            class="task-list"
-            role="list"
-            aria-label="Tasks"
-            aria-live="polite"
-            aria-relevant="additions removals"
-          >
-            <!-- Rendered by app.js -->
-          </div>
+          <!-- Task list container -->
+          <div id="task-list" class="task-list" role="list" aria-live="polite"></div>
         </section>
 
-      </div>
+      </div><!-- /.main-inner -->
     </main>
 
   </div><!-- /.app-layout -->
 
 
   <!-- ====================================================
-       ADD / EDIT TASK MODAL
+       TASK CREATE / EDIT MODAL DIALOG
        ==================================================== -->
   <div
     id="modal-overlay"
@@ -532,13 +659,26 @@
   >
     <div class="modal">
       <div class="modal__header">
-        <h2 id="modal-title" class="modal__title">Add New Task</h2>
+        <div class="modal__title-wrap">
+          <div class="modal__icon-badge" aria-hidden="true">
+            <svg class="tf-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <h2 id="modal-title" class="modal__title">Add New Task</h2>
+        </div>
         <button
           id="modal-close"
           type="button"
           class="modal__close"
           aria-label="Close dialog"
-        >✕</button>
+        >
+          <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
       <div class="modal__body">
@@ -546,9 +686,12 @@
 
           <!-- Title -->
           <div class="form-group">
-            <label for="field-title" class="form-label form-label--required">
-              Task Title
-            </label>
+            <div class="form-label-row">
+              <label for="field-title" class="form-label form-label--required">
+                Task Title
+              </label>
+              <span class="form-counter" id="title-counter">0 / 200</span>
+            </div>
             <input
               id="field-title"
               type="text"
@@ -566,13 +709,16 @@
 
           <!-- Description -->
           <div class="form-group">
-            <label for="field-description" class="form-label">
-              Description <span class="text-muted text-sm">(optional)</span>
-            </label>
+            <div class="form-label-row">
+              <label for="field-description" class="form-label">
+                Description <span class="text-muted text-sm">(optional)</span>
+              </label>
+              <span class="form-counter" id="desc-counter">0 / 1000</span>
+            </div>
             <textarea
               id="field-description"
               class="form-textarea"
-              placeholder="Add more details, context or notes…"
+              placeholder="Add more details, context, notes or checklist items…"
               maxlength="1000"
               rows="3"
               aria-describedby="error-description"
@@ -587,25 +733,39 @@
               <label for="field-priority" class="form-label">
                 Priority
               </label>
-              <select id="field-priority" class="form-select" aria-label="Select task priority">
-                <option value="low">🟢 Low</option>
-                <option value="medium" selected>🟡 Medium</option>
-                <option value="high">🔴 High</option>
-              </select>
+              <div class="select-wrapper">
+                <select id="field-priority" class="form-select" aria-label="Select task priority">
+                  <option value="low">Low Priority</option>
+                  <option value="medium" selected>Medium Priority</option>
+                  <option value="high">High Priority</option>
+                </select>
+                <span class="select-chevron" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </div>
             </div>
 
             <div class="form-group">
               <label for="field-category" class="form-label">
                 Category
               </label>
-              <select id="field-category" class="form-select" aria-label="Select task category">
-                <option value="Work">💼 Work</option>
-                <option value="Personal">🏠 Personal</option>
-                <option value="Study">📚 Study</option>
-                <option value="Health">🏃 Health</option>
-                <option value="Finance">💰 Finance</option>
-                <option value="General" selected>🏷️ General</option>
-              </select>
+              <div class="select-wrapper">
+                <select id="field-category" class="form-select" aria-label="Select task category">
+                  <option value="Work">Work</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Study">Study</option>
+                  <option value="Health">Health</option>
+                  <option value="Finance">Finance</option>
+                  <option value="General" selected>General</option>
+                </select>
+                <span class="select-chevron" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -617,7 +777,7 @@
             <input
               id="field-due-date"
               type="date"
-              class="form-input"
+              class="form-input form-date-input"
               aria-describedby="error-due-date"
               aria-invalid="false"
             />
@@ -650,13 +810,22 @@
   >
     <div class="modal modal--confirm">
       <div class="modal__header">
-        <h2 id="confirm-dialog-title" class="modal__title">Confirm Delete</h2>
+        <div class="modal__title-wrap">
+          <div class="modal__icon-badge modal__icon-badge--danger" aria-hidden="true">
+            <svg class="tf-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <h2 id="confirm-dialog-title" class="modal__title">Confirm Action</h2>
+        </div>
       </div>
       <div class="modal__body">
         <p id="confirm-message" class="confirm-dialog__message"></p>
         <div class="confirm-dialog__actions">
           <button id="btn-confirm-cancel" type="button" class="btn btn-secondary">Cancel</button>
-          <button id="btn-confirm-ok"     type="button" class="btn btn-danger-solid">Delete Task</button>
+          <button id="btn-confirm-ok"     type="button" class="btn btn-danger-solid">Confirm Delete</button>
         </div>
       </div>
     </div>
@@ -677,34 +846,81 @@
   >
     <div class="modal modal--settings">
       <div class="modal__header">
-        <h2 id="settings-dialog-title" class="modal__title">Settings & Data</h2>
+        <div class="modal__title-wrap">
+          <div class="modal__icon-badge" aria-hidden="true">
+            <svg class="tf-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 id="settings-dialog-title" class="modal__title">Settings & Data</h2>
+            <p id="settings-dialog-desc" class="modal__subtitle">Manage theme preferences, offline data backups, and storage.</p>
+          </div>
+        </div>
         <button
           id="settings-close"
           type="button"
           class="modal__close"
           aria-label="Close settings dialog"
-        >✕</button>
+        >
+          <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
+
       <div class="modal__body">
+        <!-- Appearance Group -->
         <div class="settings-group">
-          <h3 class="settings-group__title">Theme Preference</h3>
-          <div class="settings-theme-buttons">
-            <button id="btn-theme-light" type="button" class="btn btn-secondary btn-sm">☀️ Light</button>
-            <button id="btn-theme-dark" type="button" class="btn btn-secondary btn-sm">🌙 Dark</button>
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Appearance</h3>
+            <p class="settings-group__desc">Customize how TaskFlow looks on your screen.</p>
+          </div>
+          <div class="settings-theme-cards">
+            <button id="btn-theme-light" type="button" class="theme-card theme-card--light" aria-label="Select Light Theme">
+              <span class="theme-card__preview">
+                <span class="theme-card__preview-bar"></span>
+                <span class="theme-card__preview-dot"></span>
+              </span>
+              <span class="theme-card__label">Light</span>
+            </button>
+            <button id="btn-theme-dark" type="button" class="theme-card theme-card--dark" aria-label="Select Dark Theme">
+              <span class="theme-card__preview">
+                <span class="theme-card__preview-bar"></span>
+                <span class="theme-card__preview-dot"></span>
+              </span>
+              <span class="theme-card__label">Dark</span>
+            </button>
           </div>
         </div>
 
+        <!-- Backup & Restore Group -->
         <div class="settings-group">
-          <h3 class="settings-group__title">Backup & Restore</h3>
-          <p id="settings-dialog-desc" class="settings-group__desc text-muted text-sm">
-            Save your tasks to an offline JSON backup or restore from a previously saved file.
-          </p>
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Backup & Restore</h3>
+            <p class="settings-group__desc">
+              Save your tasks to an offline JSON backup or restore from a previously exported file.
+            </p>
+          </div>
           <div class="settings-actions">
             <button id="btn-export-json" type="button" class="btn btn-secondary btn-sm">
-              📥 Export Tasks (JSON)
+              <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export Tasks (JSON)</span>
             </button>
+
             <label for="import-file-input" class="btn btn-secondary btn-sm file-upload-label">
-              📤 Import Tasks (JSON)
+              <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Import Tasks (JSON)</span>
             </label>
             <input
               id="import-file-input"
@@ -715,17 +931,53 @@
           </div>
         </div>
 
+        <!-- Data Cleanup Group -->
         <div class="settings-group settings-group--danger">
-          <h3 class="settings-group__title">Data Cleanup</h3>
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Data Maintenance</h3>
+            <p class="settings-group__desc">Perform routine cleanup or reset the dashboard.</p>
+          </div>
           <div class="settings-actions">
             <button id="btn-clear-completed" type="button" class="btn btn-secondary btn-sm">
-              🧹 Clear Completed Tasks
+              <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear Completed Tasks</span>
             </button>
             <button id="btn-clear-all" type="button" class="btn btn-danger-ghost btn-sm">
-              ⚠️ Reset All Tasks
+              <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <span>Reset All Tasks</span>
             </button>
           </div>
         </div>
+
+        <!-- Application Info Group -->
+        <div class="settings-group settings-group--info">
+          <div class="settings-info-card">
+            <div class="settings-info-row">
+              <span class="settings-info-label">Application</span>
+              <span class="settings-info-value">TaskFlow v1.0.0</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">Author</span>
+              <span class="settings-info-value">Mrinal Prakash</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">Licenses</span>
+              <span class="settings-info-value">MIT (Code) & CC BY 4.0 (Docs)</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">Privacy</span>
+              <span class="settings-info-value">100% Client-Side LocalStorage</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

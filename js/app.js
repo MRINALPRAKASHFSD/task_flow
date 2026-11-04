@@ -50,6 +50,26 @@ import {
   trapFocus,
 } from './utils.js';
 
+import {
+  createEditIcon,
+  createDeleteIcon,
+  createCheckIcon,
+  createCalendarIcon,
+  createAlertIcon,
+  createClockIcon,
+  createFlameIcon,
+  createSunIcon,
+  createMoonIcon,
+  createPlusIcon,
+  createSearchIcon,
+  createCloseIcon,
+  createSettingsIcon,
+  createToastSuccessIcon,
+  createToastErrorIcon,
+  createToastInfoIcon,
+  createPriorityDot,
+} from './icons.js';
+
 // ─── Application State ────────────────────────────────────────────────────────
 
 const state = {
@@ -137,6 +157,8 @@ const dom = {
   errorTitle:         $('error-title'),
   errorDescription:   $('error-description'),
   errorDueDate:       $('error-due-date'),
+  titleCounter:       $('title-counter'),
+  descCounter:        $('desc-counter'),
   btnSubmit:          $('btn-submit'),
   btnCancel:          $('btn-cancel'),
 
@@ -165,11 +187,17 @@ const dom = {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  setText(dom.themeIcon, theme === 'dark' ? '☀️' : '🌙');
+  if (dom.themeIcon) {
+    dom.themeIcon.replaceChildren(theme === 'dark' ? createSunIcon(18) : createMoonIcon(18));
+  }
   dom.themeToggle.setAttribute(
     'aria-label',
     theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
   );
+  if (dom.btnThemeLight && dom.btnThemeDark) {
+    dom.btnThemeLight.classList.toggle('is-active', theme === 'light');
+    dom.btnThemeDark.classList.toggle('is-active', theme === 'dark');
+  }
 }
 
 function toggleTheme() {
@@ -211,11 +239,19 @@ function showToast(message, type = 'info', durationMs = 3200) {
   toast.setAttribute('role', 'status');
   toast.setAttribute('aria-live', 'polite');
 
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   const iconSpan = document.createElement('span');
   iconSpan.className = 'toast__icon';
   iconSpan.setAttribute('aria-hidden', 'true');
-  iconSpan.textContent = icons[type] || 'ℹ️';
+
+  let iconSvg = null;
+  if (type === 'success') {
+    iconSvg = createToastSuccessIcon(18);
+  } else if (type === 'error') {
+    iconSvg = createToastErrorIcon(18);
+  } else {
+    iconSvg = createToastInfoIcon(18);
+  }
+  if (iconSvg) iconSpan.appendChild(iconSvg);
 
   const msgSpan = document.createElement('span');
   msgSpan.textContent = message;
@@ -313,6 +349,10 @@ function closeConfirm(result) {
 function openSettings() {
   if (!dom.settingsOverlay) return;
   settingsInvokingElement = document.activeElement;
+  if (dom.btnThemeLight && dom.btnThemeDark) {
+    dom.btnThemeLight.classList.toggle('is-active', state.theme === 'light');
+    dom.btnThemeDark.classList.toggle('is-active', state.theme === 'dark');
+  }
   dom.settingsOverlay.classList.add('is-open');
   dom.settingsOverlay.setAttribute('aria-hidden', 'false');
   setBackgroundInert(true);
@@ -446,7 +486,20 @@ async function handleResetAllTasks() {
   showToast('All tasks have been reset.', 'info');
 }
 
-// ─── Task Modal Dialog ────────────────────────────────────────────────────────
+// ─── Task Modal Dialog & Character Counters ───────────────────────────────────
+
+function updateCharCounters() {
+  if (dom.titleCounter && dom.fieldTitle) {
+    const tLen = dom.fieldTitle.value.length;
+    dom.titleCounter.textContent = `${tLen} / 200`;
+    dom.titleCounter.classList.toggle('is-limit', tLen >= 190);
+  }
+  if (dom.descCounter && dom.fieldDescription) {
+    const dLen = dom.fieldDescription.value.length;
+    dom.descCounter.textContent = `${dLen} / 1000`;
+    dom.descCounter.classList.toggle('is-limit', dLen >= 950);
+  }
+}
 
 function openModal(title) {
   modalInvokingElement = document.activeElement;
@@ -455,6 +508,7 @@ function openModal(title) {
   dom.modalOverlay.setAttribute('aria-hidden', 'false');
   setBackgroundInert(true);
   clearFormErrors();
+  updateCharCounters();
   dom.fieldTitle.focus();
 }
 
@@ -477,6 +531,7 @@ function resetForm() {
   dom.fieldPriority.value = 'medium';
   dom.fieldDueDate.value = '';
   clearFormErrors();
+  updateCharCounters();
 }
 
 function showFieldError(field, errorEl, message) {
@@ -660,9 +715,10 @@ function buildTaskCard(task, referenceDate) {
   // Priority badge
   const priorityBadge = document.createElement('span');
   priorityBadge.className = `badge badge-priority-${task.priority}`;
-  const priorityIcons = { low: '🟢', medium: '🟡', high: '🔴' };
+  const dot = createPriorityDot(task.priority);
+  if (dot) priorityBadge.appendChild(dot);
   const pLabel = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
-  priorityBadge.textContent = `${priorityIcons[task.priority] || ''} ${pLabel}`;
+  priorityBadge.appendChild(document.createTextNode(` ${pLabel}`));
   meta.appendChild(priorityBadge);
 
   // Due date badge (if present)
@@ -672,25 +728,32 @@ function buildTaskCard(task, referenceDate) {
     const isToday = isTaskDueToday(task, referenceDate);
 
     let dueClass = 'badge-due-upcoming';
-    let dueIcon = '📅';
+    let dueSvg = createCalendarIcon(13);
 
     if (isOverdue) {
       dueClass = 'badge-due-overdue';
-      dueIcon = '⚠️';
+      dueSvg = createAlertIcon(13);
     } else if (isToday) {
       dueClass = 'badge-due-today';
-      dueIcon = '⏰';
+      dueSvg = createClockIcon(13);
     }
 
     dueBadge.className = `badge ${dueClass}`;
-    dueBadge.textContent = `${dueIcon} ${formatDueDate(task.dueDate, referenceDate)}`;
+    if (dueSvg) dueBadge.appendChild(dueSvg);
+    dueBadge.appendChild(document.createTextNode(` ${formatDueDate(task.dueDate, referenceDate)}`));
     meta.appendChild(dueBadge);
   }
 
   // Status badge
   const statusBadge = document.createElement('span');
   statusBadge.className = `badge badge-status-${isCompleted ? 'completed' : 'pending'}`;
-  statusBadge.textContent = isCompleted ? '✓ Completed' : '○ Pending';
+  if (isCompleted) {
+    const checkSvg = createCheckIcon(12);
+    if (checkSvg) statusBadge.appendChild(checkSvg);
+    statusBadge.appendChild(document.createTextNode(' Completed'));
+  } else {
+    statusBadge.textContent = '○ Pending';
+  }
   meta.appendChild(statusBadge);
 
   // Date (relative)
@@ -711,14 +774,16 @@ function buildTaskCard(task, referenceDate) {
   editBtn.type = 'button';
   editBtn.className = 'task-action-btn task-action-btn--edit';
   editBtn.setAttribute('aria-label', `Edit task: ${task.title}`);
-  editBtn.textContent = '✏️';
+  const editSvg = createEditIcon(14);
+  if (editSvg) editBtn.appendChild(editSvg);
   editBtn.addEventListener('click', () => handleEditTask(task.id));
 
   const deleteBtn = document.createElement('button');
   deleteBtn.type = 'button';
   deleteBtn.className = 'task-action-btn task-action-btn--delete';
   deleteBtn.setAttribute('aria-label', `Delete task: ${task.title}`);
-  deleteBtn.textContent = '🗑️';
+  const deleteSvg = createDeleteIcon(14);
+  if (deleteSvg) deleteBtn.appendChild(deleteSvg);
   deleteBtn.addEventListener('click', () => handleDeleteTask(task.id));
 
   actions.appendChild(editBtn);
@@ -751,249 +816,213 @@ function renderStats() {
 
   if (dom.progressFill) {
     dom.progressFill.style.width = `${stats.completionRate}%`;
-    dom.progressFill.setAttribute('aria-valuenow', stats.completionRate);
   }
   if (dom.progressLabel) {
-    setText(dom.progressLabel, `${stats.completionRate}% complete`);
+    setText(dom.progressLabel, `${stats.completionRate}% Completed`);
   }
-
-  // Sidebar view badges
-  const todayCount = state.tasks.filter((t) => isTaskDueToday(t, now)).length;
-  const upcomingCount = state.tasks.filter((t) => isTaskUpcoming(t, now)).length;
-  const overdueCount = stats.overdue || 0;
-
-  setText(dom.sidebarBadgeAll,       state.tasks.length);
-  setText(dom.sidebarBadgeToday,     todayCount);
-  setText(dom.sidebarBadgeUpcoming,  upcomingCount);
-  setText(dom.sidebarBadgeOverdue,   overdueCount);
-  setText(dom.sidebarBadgePending,   stats.pending);
-  setText(dom.sidebarBadgeCompleted, stats.completed);
-  setText(dom.sidebarBadgeHigh,      stats.highPriority);
-
-  // Category counts in sidebar
-  CATEGORIES.forEach((cat) => {
-    const badgeEl = $(`cat-badge-${cat}`);
-    if (badgeEl) {
-      const count = state.tasks.filter((t) => (t.category || 'General').toLowerCase() === cat.toLowerCase()).length;
-      setText(badgeEl, count);
-    }
-  });
-
-  const catAllBadge = $('cat-badge-all');
-  if (catAllBadge) setText(catAllBadge, state.tasks.length);
 }
 
-function renderFilterControls() {
-  // Update view filter tabs
-  dom.filterTabs.forEach((tab) => {
-    const isActive = tab.dataset.filter === state.filter;
-    tab.classList.toggle('is-active', isActive);
-    tab.setAttribute('aria-pressed', String(isActive));
-  });
+function updateSidebarBadges() {
+  const now = new Date();
+  const total = state.tasks.length;
+  const today = state.tasks.filter((t) => isTaskDueToday(t, now) && t.status !== 'completed' && !t.completed).length;
+  const upcoming = state.tasks.filter((t) => isTaskUpcoming(t, now) && t.status !== 'completed' && !t.completed).length;
+  const overdue = state.tasks.filter((t) => isTaskOverdue(t, now)).length;
+  const pending = state.tasks.filter((t) => t.status !== 'completed' && !t.completed).length;
+  const completed = state.tasks.filter((t) => t.status === 'completed' || t.completed).length;
+  const high = state.tasks.filter((t) => t.priority === 'high' && t.status !== 'completed' && !t.completed).length;
 
-  // Update sidebar view links
-  document.querySelectorAll('.sidebar-nav__link[data-filter]').forEach((link) => {
-    const isActive = link.dataset.filter === state.filter;
-    link.classList.toggle('is-active', isActive);
-    link.setAttribute('aria-current', isActive ? 'page' : 'false');
-  });
+  setText(dom.sidebarBadgeAll,       total);
+  setText(dom.sidebarBadgeToday,     today);
+  setText(dom.sidebarBadgeUpcoming,  upcoming);
+  setText(dom.sidebarBadgeOverdue,   overdue);
+  setText(dom.sidebarBadgePending,   pending);
+  setText(dom.sidebarBadgeCompleted, completed);
+  setText(dom.sidebarBadgeHigh,      high);
 
-  // Update sidebar category links
-  dom.sidebarCategoryLinks.forEach((link) => {
-    const isCatActive = (link.dataset.category || 'all') === state.category;
-    link.classList.toggle('is-active', isCatActive);
-  });
-
-  // Update category select dropdown
-  if (dom.filterCategorySelect) {
-    dom.filterCategorySelect.value = state.category;
+  if (dom.sidebarBadgeOverdue) {
+    dom.sidebarBadgeOverdue.classList.toggle('sidebar-nav__badge--danger', overdue > 0);
   }
+}
 
-  // Update sort dropdown
-  if (dom.sortSelect) {
-    dom.sortSelect.value = state.sortBy;
+function updateActiveSidebarLink() {
+  const allViewLinks = [
+    dom.sidebarAll,
+    dom.sidebarToday,
+    dom.sidebarUpcoming,
+    dom.sidebarOverdue,
+    dom.sidebarPending,
+    dom.sidebarCompleted,
+    dom.sidebarHigh,
+  ];
+
+  allViewLinks.forEach((link) => {
+    if (!link) return;
+    const match = link.getAttribute('data-filter') === state.filter;
+    link.classList.toggle('is-active', match);
+    link.setAttribute('aria-current', match ? 'page' : 'false');
+  });
+
+  if (dom.sidebarCategoryLinks) {
+    dom.sidebarCategoryLinks.forEach((link) => {
+      const match = link.getAttribute('data-category') === state.category;
+      link.classList.toggle('is-active', match);
+      link.setAttribute('aria-current', match ? 'page' : 'false');
+    });
   }
+}
 
-  // Update view title and category badge in task list header
-  const viewTitles = {
+function updateViewTitle() {
+  const titleMap = {
     all:       'All Tasks',
-    today:     "Today's Tasks",
+    today:     'Due Today',
     upcoming:  'Upcoming Tasks',
     overdue:   'Overdue Tasks',
     pending:   'Pending Tasks',
     completed: 'Completed Tasks',
     high:      'High Priority Tasks',
   };
-  const title = viewTitles[state.filter] || 'Tasks';
+
+  const title = titleMap[state.filter] || 'Tasks';
   setText(dom.viewTitle, title);
 
   if (dom.viewCategoryBadge) {
     if (state.category && state.category !== 'all') {
       dom.viewCategoryBadge.hidden = false;
-      dom.viewCategoryBadge.className = `badge badge-cat-${state.category.toLowerCase()}`;
       dom.viewCategoryBadge.textContent = state.category;
+      dom.viewCategoryBadge.className = `badge badge-cat-${state.category.toLowerCase()} badge-category`;
     } else {
       dom.viewCategoryBadge.hidden = true;
     }
-  }
-
-  // Toggle search clear button
-  if (dom.searchClear) {
-    dom.searchClear.hidden = !state.search;
   }
 }
 
 function renderTaskList() {
   const now = new Date();
   const visible = applyFilters(state.tasks, {
-    status:        state.filter,
-    search:        state.search,
-    category:      state.category,
-    sortBy:        state.sortBy,
-    referenceDate: now,
-  });
+    status:   state.filter,
+    category: state.category,
+    search:   state.search,
+    sortBy:   state.sortBy,
+  }, now);
 
-  // Update task counter
-  setText(
-    dom.taskCount,
-    visible.length === 1 ? '1 task' : `${visible.length} tasks`
-  );
+  const countText = `${visible.length} ${visible.length === 1 ? 'task' : 'tasks'}`;
+  setText(dom.taskCount, countText);
 
-  // Clear current task card nodes
-  while (dom.taskList.firstChild) {
-    dom.taskList.removeChild(dom.taskList.firstChild);
-  }
+  dom.taskList.replaceChildren();
 
-  // Handle empty state
   if (visible.length === 0) {
-    dom.emptyState.hidden = false;
-    const titleEl = dom.emptyState.querySelector('.empty-state__title');
-    const descEl  = dom.emptyState.querySelector('.empty-state__description');
+    dom.emptyState.style.display = 'block';
+    dom.taskList.style.display = 'none';
+  } else {
+    dom.emptyState.style.display = 'none';
+    dom.taskList.style.display = 'flex';
 
-    if (state.search) {
-      setText(titleEl, 'No matching tasks');
-      setText(descEl, `No tasks found matching "${state.search}". Try different search terms.`);
-    } else if (state.category && state.category !== 'all') {
-      setText(titleEl, `No ${state.category} tasks`);
-      setText(descEl, `You have no tasks in the ${state.category} category. Add one to get started.`);
-    } else if (state.filter === 'today') {
-      setText(titleEl, 'Nothing due today');
-      setText(descEl, 'All caught up for today! Plan ahead or enjoy your day.');
-    } else if (state.filter === 'upcoming') {
-      setText(titleEl, 'No upcoming deadlines');
-      setText(descEl, 'No tasks scheduled with upcoming due dates.');
-    } else if (state.filter === 'overdue') {
-      setText(titleEl, 'Zero overdue tasks!');
-      setText(descEl, "Great job staying organized! You don't have any past-due tasks.");
-    } else if (state.filter === 'completed') {
-      setText(titleEl, 'No completed tasks yet');
-      setText(descEl, 'Complete tasks by clicking their checkboxes to see them here.');
-    } else if (state.filter === 'pending') {
-      setText(titleEl, 'All caught up!');
-      setText(descEl, 'No pending tasks left. Take a break or add new goals.');
-    } else if (state.filter === 'high') {
-      setText(titleEl, 'No high priority tasks');
-      setText(descEl, 'There are currently no urgent pending tasks requiring immediate attention.');
-    } else {
-      setText(titleEl, 'No tasks yet');
-      setText(descEl, 'Add your first task to get started. Plan smarter, stay organized!');
+    const frag = document.createDocumentFragment();
+    for (const task of visible) {
+      frag.appendChild(buildTaskCard(task, now));
     }
-    return;
+    dom.taskList.appendChild(frag);
   }
-
-  dom.emptyState.hidden = true;
-  const fragment = document.createDocumentFragment();
-  visible.forEach((task) => fragment.appendChild(buildTaskCard(task, now)));
-  dom.taskList.appendChild(fragment);
 }
 
-/** Complete render cycle. */
 function render() {
   renderWelcomeHeader();
   renderStats();
-  renderFilterControls();
+  updateSidebarBadges();
+  updateActiveSidebarLink();
+  updateViewTitle();
   renderTaskList();
 }
 
-// ─── Event Listeners Setup ────────────────────────────────────────────────────
+// ─── Modal Openers ───────────────────────────────────────────────────────────
+
+function handleOpenAddModal() {
+  state.editingId = null;
+  resetForm();
+  if (state.category && state.category !== 'all') {
+    dom.fieldCategory.value = state.category;
+  }
+  openModal('Add New Task');
+}
+
+// ─── Event Wiring ─────────────────────────────────────────────────────────────
 
 function wireEvents() {
   // Theme Toggle
   dom.themeToggle.addEventListener('click', toggleTheme);
 
-  // Mobile Navigation Drawer Toggle
-  if (dom.btnMobileNav) {
-    dom.btnMobileNav.addEventListener('click', () => {
-      const isOpen = dom.appSidebar.classList.contains('is-open');
-      if (isOpen) closeMobileNav();
-      else openMobileNav();
-    });
-  }
-
-  if (dom.sidebarOverlay) {
-    dom.sidebarOverlay.addEventListener('click', closeMobileNav);
-  }
+  // Mobile Navigation Drawer
+  if (dom.btnMobileNav) dom.btnMobileNav.addEventListener('click', openMobileNav);
+  if (dom.sidebarOverlay) dom.sidebarOverlay.addEventListener('click', closeMobileNav);
 
   // Add Task Buttons
-  dom.btnAddTask.addEventListener('click', () => {
-    state.editingId = null;
-    resetForm();
-    openModal('Add New Task');
-  });
+  dom.btnAddTask.addEventListener('click', handleOpenAddModal);
+  if (dom.btnHeaderAdd) dom.btnHeaderAdd.addEventListener('click', handleOpenAddModal);
+  if (dom.btnEmptyAdd)  dom.btnEmptyAdd.addEventListener('click', handleOpenAddModal);
 
-  if (dom.btnHeaderAdd) {
-    dom.btnHeaderAdd.addEventListener('click', () => {
-      state.editingId = null;
-      resetForm();
-      openModal('Add New Task');
-    });
-  }
-
-  if (dom.btnEmptyAdd) {
-    dom.btnEmptyAdd.addEventListener('click', () => {
-      state.editingId = null;
-      resetForm();
-      openModal('Add New Task');
-    });
-  }
-
-  // Modal Dialog Close
+  // Modal Cancel & Close
   dom.modalClose.addEventListener('click', closeModal);
   dom.btnCancel.addEventListener('click', closeModal);
   dom.modalOverlay.addEventListener('click', (e) => {
     if (e.target === dom.modalOverlay) closeModal();
   });
 
-  // Task Form Submit
+  // Modal Form Submission
   dom.taskForm.addEventListener('submit', handleFormSubmit);
 
-  // Status Filter Tabs
-  dom.filterTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      state.filter = tab.dataset.filter || 'all';
-      saveFilter(state.filter);
-      persistState();
-      render();
-    });
-  });
+  // Sidebar Filter Links
+  const filterLinks = [
+    dom.sidebarAll,
+    dom.sidebarToday,
+    dom.sidebarUpcoming,
+    dom.sidebarOverdue,
+    dom.sidebarPending,
+    dom.sidebarCompleted,
+    dom.sidebarHigh,
+  ];
 
-  // Sidebar View Links
-  document.querySelectorAll('.sidebar-nav__link[data-filter]').forEach((link) => {
-    link.addEventListener('click', () => {
-      state.filter = link.dataset.filter || 'all';
-      saveFilter(state.filter);
+  filterLinks.forEach((link) => {
+    if (!link) return;
+    link.addEventListener('click', (e) => {
+      const f = e.currentTarget.getAttribute('data-filter');
+      state.filter = f;
+      saveFilter(f);
       persistState();
-      closeMobileNav();
+
+      // Sync toolbar tabs if applicable
+      dom.filterTabs.forEach((tab) => {
+        tab.classList.toggle('is-active', tab.getAttribute('data-filter') === f);
+      });
+
       render();
+      closeMobileNav();
     });
   });
 
   // Sidebar Category Links
-  dom.sidebarCategoryLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      state.category = link.dataset.category || 'all';
+  if (dom.sidebarCategoryLinks) {
+    dom.sidebarCategoryLinks.forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const cat = e.currentTarget.getAttribute('data-category');
+        state.category = cat;
+        if (dom.filterCategorySelect) dom.filterCategorySelect.value = cat;
+        persistState();
+        render();
+        closeMobileNav();
+      });
+    });
+  }
+
+  // Toolbar Filter Tabs
+  dom.filterTabs.forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      const f = e.currentTarget.getAttribute('data-filter');
+      state.filter = f;
+      saveFilter(f);
       persistState();
-      closeMobileNav();
+
+      dom.filterTabs.forEach((t) => t.classList.toggle('is-active', t === e.currentTarget));
       render();
     });
   });
@@ -1078,8 +1107,32 @@ function wireEvents() {
   if (dom.btnClearCompleted) dom.btnClearCompleted.addEventListener('click', handleClearCompletedTasks);
   if (dom.btnClearAll) dom.btnClearAll.addEventListener('click', handleResetAllTasks);
 
-  // Keyboard navigation: Escape key closes active modals, Tab traps focus
+  // Form Character Counters
+  if (dom.fieldTitle) dom.fieldTitle.addEventListener('input', updateCharCounters);
+  if (dom.fieldDescription) dom.fieldDescription.addEventListener('input', updateCharCounters);
+
+  // Keyboard navigation & Shortcuts
   document.addEventListener('keydown', (e) => {
+    const isEditingText = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName);
+    const isAnyModalOpen =
+      (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) ||
+      (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) ||
+      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open'));
+
+    // '/' jumps focus to search
+    if (e.key === '/' && !isEditingText && !isAnyModalOpen) {
+      e.preventDefault();
+      if (dom.searchInput) dom.searchInput.focus();
+      return;
+    }
+
+    // 'n' or 'N' opens Add Task modal
+    if ((e.key === 'n' || e.key === 'N') && !isEditingText && !isAnyModalOpen) {
+      e.preventDefault();
+      handleOpenAddModal();
+      return;
+    }
+
     // 1. Priority order for Escape: topmost dialog closes first
     if (e.key === 'Escape') {
       if (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) {
@@ -1137,6 +1190,31 @@ function init() {
   state.category = savedState.preferences?.category || 'all';
   state.sortBy   = savedState.preferences?.sortBy || 'default';
 
+  // Support demo / screenshot parameter query options
+  const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
+  if (urlParams) {
+    const pTheme = urlParams.get('theme');
+    if (pTheme === 'dark' || pTheme === 'light') {
+      state.theme = pTheme;
+    }
+    if (urlParams.get('seed') === '1' && state.tasks.length === 0) {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const tomorrowIso = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+      const yesterdayIso = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const futureIso = new Date(Date.now() + 259200000).toISOString().slice(0, 10);
+
+      state.tasks = [
+        createTask({ title: 'Complete Quarterly System Architecture Review', description: 'Audit microservice boundaries, evaluate latency metrics and document ADRs.', priority: 'high', category: 'Work', dueDate: todayIso }),
+        createTask({ title: 'Prepare UX presentation for product team', description: 'Showcase redesign tokens, mobile navigation drawer, and interaction flows.', priority: 'medium', category: 'Study', dueDate: tomorrowIso }),
+        createTask({ title: 'Review tax documentation & investment portfolio', description: 'Download 1099 statements and reconcile monthly expense statements.', priority: 'high', category: 'Finance', dueDate: yesterdayIso }),
+        createTask({ title: 'Schedule annual health checkup & dental cleaning', description: 'Book appointment with Dr. Mehta for Friday afternoon.', priority: 'low', category: 'Health', dueDate: futureIso }),
+        { ...createTask({ title: 'Setup GitHub branch protection and CodeQL workflow', description: 'Enforce strict status checks on main branch.', priority: 'medium', category: 'Work' }), status: 'completed', completed: true },
+        { ...createTask({ title: 'Morning 5km endurance run', description: 'Track pace and heart rate metrics.', priority: 'low', category: 'Health' }), status: 'completed', completed: true },
+      ];
+      persistState();
+    }
+  }
+
   // Apply theme immediately
   applyTheme(state.theme);
 
@@ -1145,6 +1223,14 @@ function init() {
 
   // Initial render
   render();
+
+  if (urlParams) {
+    if (urlParams.get('modal') === 'add') {
+      setTimeout(() => handleOpenAddModal(), 50);
+    } else if (urlParams.get('modal') === 'settings') {
+      setTimeout(() => openSettings(), 50);
+    }
+  }
 }
 
 // Initialize when DOM content is ready

@@ -15,13 +15,17 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 
 ## Screenshots
 
-> **Note:** Screenshots will be added after the first public release.
-> The `assets/screenshots/` directory is reserved for them.
+| Desktop (Light Theme) | Desktop (Dark Theme) |
+|:---:|:---:|
+| ![TaskFlow Desktop Light Theme](assets/screenshots/desktop-light.png) | ![TaskFlow Desktop Dark Theme](assets/screenshots/desktop-dark.png) |
 
-| Light Theme | Dark Theme |
-|-------------|------------|
-| *(placeholder — light theme screenshot)* | *(placeholder — dark theme screenshot)* |
-| *(placeholder — mobile view)* | *(placeholder — task form)* |
+| Mobile (Light Theme) | Mobile (Dark Theme) |
+|:---:|:---:|
+| ![TaskFlow Mobile Light Theme](assets/screenshots/mobile-light.png) | ![TaskFlow Mobile Dark Theme](assets/screenshots/mobile-dark.png) |
+
+| Task Creation & Edit Modal | Settings & Data Management |
+|:---:|:---:|
+| ![TaskFlow Modal Dialog](assets/screenshots/task-modal.png) | ![TaskFlow Settings Modal](assets/screenshots/settings-modal.png) |
 
 ---
 
