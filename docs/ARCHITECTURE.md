@@ -64,6 +64,8 @@ Exports:
 - `saveAppState(state)` — persists versioned state with schema validation.
 - `validateTaskRecord(raw)` — sanitizes individual task records against runtime corruption.
 - `cleanseTaskList(rawList)` — scrubs arrays of tasks, filling missing defaults and discarding invalid entries.
+- `exportAppStateJSON()` — serializes the current versioned application state to a formatted JSON string for offline backup.
+- `importAppStateJSON(jsonString)` — validates, cleanses, and restores state from an external JSON backup file.
 - Legacy compatibility APIs: `loadTasks`, `saveTasks`, `loadTheme`, `saveTheme`, `loadFilter`, `saveFilter`.
 - `memoryStore` & `clearMemoryStore()` — test and private-mode memory fallback container.
 
