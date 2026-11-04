@@ -213,9 +213,13 @@ export function getGreeting(date = new Date()) {
  * @returns {string}
  */
 export function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = String(str);
-  return div.innerHTML;
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
@@ -274,3 +278,62 @@ export function isNonEmptyString(value) {
 export function setText(el, text) {
   if (el) el.textContent = String(text ?? '');
 }
+
+/**
+ * Focusable element CSS selector for accessible modal dialogs and focus trapping.
+ */
+export const FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+/**
+ * Return an array of all visible, focusable elements within a container element.
+ *
+ * @param {Element} container
+ * @returns {Element[]}
+ */
+export function getFocusableElements(container) {
+  if (!container || typeof container.querySelectorAll !== 'function') return [];
+  const list = Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
+  return list.filter((el) => {
+    if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') return false;
+    return true;
+  });
+}
+
+/**
+ * Traps Tab and Shift + Tab keyboard focus inside a modal dialog container.
+ *
+ * @param {KeyboardEvent} event
+ * @param {Element} container
+ */
+export function trapFocus(event, container) {
+  if (!container || event.key !== 'Tab') return;
+  const focusables = getFocusableElements(container);
+  if (focusables.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = typeof document !== 'undefined' ? document.activeElement : null;
+
+  if (event.shiftKey) {
+    if (active === first || (container.contains && !container.contains(active))) {
+      event.preventDefault();
+      if (typeof last.focus === 'function') last.focus();
+    }
+  } else {
+    if (active === last || (container.contains && !container.contains(active))) {
+      event.preventDefault();
+      if (typeof first.focus === 'function') first.focus();
+    }
+  }
+}
+

@@ -5,7 +5,7 @@
 ### Bug Reports
 
 If you have found a defect in TaskFlow, please open a
-[Bug Report](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=bug_report.yml).
+[Bug Report](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=bug_report.yml).
 
 Include:
 - Your browser name and version.
@@ -17,13 +17,13 @@ Include:
 ### Feature Requests
 
 For suggestions and new ideas, open a
-[Feature Request](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=feature_request.yml).
+[Feature Request](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=feature_request.yml).
 
 ### Questions and General Discussion
 
 For questions about how TaskFlow works, usage guidance or general discussion,
-open a [Question](https://github.com/MRINALPRAKASHFSD/taskflow/issues/new?template=question.yml)
-or visit [GitHub Discussions](https://github.com/MRINALPRAKASHFSD/taskflow/discussions).
+open a [Question](https://github.com/MRINALPRAKASHFSD/task_flow/issues/new?template=question.yml)
+or visit [GitHub Discussions](https://github.com/MRINALPRAKASHFSD/task_flow/discussions).
 
 ### Security Vulnerabilities
 

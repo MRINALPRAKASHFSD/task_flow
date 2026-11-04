@@ -19,11 +19,11 @@ No external bundlers, transpilers, or runtime dependencies are required.
 
 ```bash
 # Clone the repository
-git clone https://github.com/MRINALPRAKASHFSD/taskflow.git
-cd taskflow
+git clone https://github.com/MRINALPRAKASHFSD/task_flow.git
+cd task_flow
 
 # Add upstream if working in a fork
-git remote add upstream https://github.com/MRINALPRAKASHFSD/taskflow.git
+git remote add upstream https://github.com/MRINALPRAKASHFSD/task_flow.git
 
 # Verify setup and run the validation suite
 npm run check

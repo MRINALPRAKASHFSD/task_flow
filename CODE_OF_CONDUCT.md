@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement by opening a
-[GitHub Security Advisory](https://github.com/MRINALPRAKASHFSD/taskflow/security/advisories/new)
+[GitHub Security Advisory](https://github.com/MRINALPRAKASHFSD/task_flow/security/advisories/new)
 marked as a Code of Conduct concern, or by using the
 [GitHub Report feature](https://docs.github.com/en/communities/maintaining-your-safety-on-github/reporting-abuse-or-spam).
 

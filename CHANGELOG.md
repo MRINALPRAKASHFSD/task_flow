@@ -11,6 +11,15 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Phase 2.1 Security, Accessibility & Quality Hardening**:
+  - **Hardened JSON Import**: `importAppStateJSON()` transactionally validates root structures, checks schema versions, detects and rejects duplicate task IDs, validates preferences, and protects existing data from being overwritten on failure.
+  - **Modal Focus Management & Trapping**: Added `trapFocus` utility cycling `Tab` and `Shift + Tab` inside active modals, hierarchical `Escape` handling, and focus restoration to invoking elements upon close.
+  - **Background Inert Management**: Dynamically sets `aria-hidden="true"` on `.app-layout` during modal activation to prevent background interaction.
+  - **Cross-Platform Syntax Validation**: Added `scripts/check-syntax.js` to reliably check all JavaScript and test files without shell wildcards.
+  - **Zero-Dependency Static Linter**: Added `scripts/lint.js` replacing the placeholder lint command with real static checks for BOM, trailing whitespace, and forbidden constructs.
+  - **Accessibility Test Suite**: Added `tests/accessibility.test.js` validating `FOCUSABLE_SELECTOR`, focusable element extraction, and Tab/Shift+Tab focus trapping.
+  - **Repository Metadata Alignment**: Standardized package URLs, bug report targets, and documentation links to the actual repository name `task_flow`.
+
 - **Phase 2 Application Architecture & Features**:
   - **Extended Task Data Model**: Added `category` (`Work`, `Personal`, `Study`, `Health`, `Finance`, `General`), `dueDate` (standardized `YYYY-MM-DD`), and synchronized `completed` boolean property.
   - **New Productivity Views**: Added sidebar views for **Today** (tasks due current day), **Upcoming** (tasks due in future), **Overdue** (pending tasks past deadline), and **High Priority**.
@@ -59,5 +68,5 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **CONTRIBUTING.md**, **CODE_OF_CONDUCT.md**, **SECURITY.md**, **SUPPORT.md**, **GOVERNANCE.md**.
 - **AUTHORS.md**, **ROADMAP.md**, **THIRD_PARTY_NOTICES.md**, **NOTICE**.
 
-[Unreleased]: https://github.com/MRINALPRAKASHFSD/taskflow/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/MRINALPRAKASHFSD/taskflow/releases/tag/v1.0.0
+[Unreleased]: https://github.com/MRINALPRAKASHFSD/task_flow/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/MRINALPRAKASHFSD/task_flow/releases/tag/v1.0.0
