@@ -92,7 +92,6 @@ import {
 import {
   createCommandPalette,
   isPaletteTriggerEvent,
-  DEFAULT_COMMANDS,
 } from './palette.js';
 
 import {
