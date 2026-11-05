@@ -21,7 +21,6 @@ import {
   getTaskDueDateTime,
   isDueSoon,
   isOverdueReminder,
-  buildReminderKey,
   checkReminders,
   DEFAULT_REMINDER_PREFERENCES,
 } from '../js/reminders.js';
