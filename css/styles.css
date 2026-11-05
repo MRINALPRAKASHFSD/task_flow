@@ -632,8 +632,8 @@ a:hover {
   right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   color: var(--color-text-muted);
@@ -781,15 +781,15 @@ a:hover {
 }
 
 .btn-danger-solid {
-  background-color: var(--color-danger);
+  background-color: var(--color-danger-solid-bg, #dc2626);
   color: #ffffff;
-  border-color: var(--color-danger);
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.2);
+  border-color: var(--color-danger-solid-bg, #dc2626);
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
 }
 
 .btn-danger-solid:hover {
-  background-color: var(--color-danger-hover);
-  border-color: var(--color-danger-hover);
+  background-color: #b91c1c;
+  border-color: #b91c1c;
 }
 
 .btn-danger-ghost {
@@ -951,8 +951,8 @@ a:hover {
 }
 
 .task-card__checkbox {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border: 2px solid var(--color-border-hover);
   border-radius: var(--radius-full);
   background: transparent;
@@ -1037,12 +1037,12 @@ a:hover {
 .badge-status-pending   { background-color: var(--color-surface-alt);    color: var(--color-text-secondary); border-color: var(--color-border); }
 
 /* Category Badges */
-.badge-cat-work     { background-color: var(--color-cat-work-bg);     color: var(--color-cat-work);     border-color: var(--color-cat-work-border); }
-.badge-cat-personal { background-color: var(--color-cat-personal-bg); color: var(--color-cat-personal); border-color: var(--color-cat-personal-border); }
-.badge-cat-study    { background-color: var(--color-cat-study-bg);    color: var(--color-cat-study);    border-color: var(--color-cat-study-border); }
-.badge-cat-health   { background-color: var(--color-cat-health-bg);   color: var(--color-cat-health);   border-color: var(--color-cat-health-border); }
-.badge-cat-finance  { background-color: var(--color-cat-finance-bg);  color: var(--color-cat-finance);  border-color: var(--color-cat-finance-border); }
-.badge-cat-general  { background-color: var(--color-cat-general-bg);  color: var(--color-cat-general);  border-color: var(--color-cat-general-border); }
+.badge-cat-work     { background-color: var(--color-cat-work-bg);     color: var(--color-cat-work-text, var(--color-cat-work));     border-color: var(--color-cat-work-border); }
+.badge-cat-personal { background-color: var(--color-cat-personal-bg); color: var(--color-cat-personal-text, var(--color-cat-personal)); border-color: var(--color-cat-personal-border); }
+.badge-cat-study    { background-color: var(--color-cat-study-bg);    color: var(--color-cat-study-text, var(--color-cat-study));    border-color: var(--color-cat-study-border); }
+.badge-cat-health   { background-color: var(--color-cat-health-bg);   color: var(--color-cat-health-text, var(--color-cat-health));   border-color: var(--color-cat-health-border); }
+.badge-cat-finance  { background-color: var(--color-cat-finance-bg);  color: var(--color-cat-finance-text, var(--color-cat-finance));  border-color: var(--color-cat-finance-border); }
+.badge-cat-general  { background-color: var(--color-cat-general-bg);  color: var(--color-cat-general-text, var(--color-cat-general));  border-color: var(--color-cat-general-border); }
 
 /* Due Date Badges */
 .badge-due-today    { background-color: var(--color-warning-subtle); color: var(--color-warning-text); border-color: var(--color-warning-border); font-weight: var(--font-weight-semibold); }
@@ -1231,6 +1231,8 @@ a:hover {
 .modal__close {
   width: 32px;
   height: 32px;
+  min-width: 32px;
+  flex-shrink: 0;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -1473,6 +1475,15 @@ a:hover {
 .file-upload-label {
   cursor: pointer;
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.file-upload-label:focus-visible,
+.file-upload-label:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Application Info Card */

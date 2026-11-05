@@ -933,6 +933,15 @@ function render() {
   updateActiveSidebarLink();
   updateViewTitle();
   renderTaskList();
+
+  // Synchronize clear button and keyboard hint with active search
+  if (dom.searchClear) {
+    dom.searchClear.hidden = !state.search;
+  }
+  const searchKbd = document.getElementById('search-kbd');
+  if (searchKbd) {
+    searchKbd.hidden = Boolean(state.search);
+  }
 }
 
 // ─── Modal Openers ───────────────────────────────────────────────────────────
@@ -1045,7 +1054,18 @@ function wireEvents() {
     });
   }
 
-  // Search Input (debounced)
+  // Search Input (immediate clear toggle + debounced filter render)
+  dom.searchInput.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (dom.searchClear) {
+      dom.searchClear.hidden = val.trim().length === 0;
+    }
+    const searchKbd = document.getElementById('search-kbd');
+    if (searchKbd) {
+      searchKbd.hidden = val.trim().length > 0;
+    }
+  });
+
   dom.searchInput.addEventListener(
     'input',
     debounce((e) => {
@@ -1104,6 +1124,18 @@ function wireEvents() {
   }
   if (dom.btnExportJson) dom.btnExportJson.addEventListener('click', handleExportJSON);
   if (dom.importFileInput) dom.importFileInput.addEventListener('change', handleImportJSON);
+
+  // File upload accessible keyboard handling (Enter / Space on label)
+  const fileUploadLabel = document.querySelector('.file-upload-label');
+  if (fileUploadLabel && dom.importFileInput) {
+    fileUploadLabel.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dom.importFileInput.click();
+      }
+    });
+  }
+
   if (dom.btnClearCompleted) dom.btnClearCompleted.addEventListener('click', handleClearCompletedTasks);
   if (dom.btnClearAll) dom.btnClearAll.addEventListener('click', handleResetAllTasks);
 
@@ -1193,6 +1225,11 @@ function init() {
   // Support demo / screenshot parameter query options
   const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
   if (urlParams) {
+    if (urlParams.get('clear') === '1') {
+      state.tasks = [];
+      saveTasks([]);
+      persistState();
+    }
     const pTheme = urlParams.get('theme');
     if (pTheme === 'dark' || pTheme === 'light') {
       state.theme = pTheme;
@@ -1223,6 +1260,11 @@ function init() {
 
   // Initial render
   render();
+
+  // Expose state hook exclusively in test / debug mode
+  if (urlParams && (urlParams.has('test') || urlParams.has('debug'))) {
+    window.__taskflow_state = state;
+  }
 
   if (urlParams) {
     if (urlParams.get('modal') === 'add') {
