@@ -15,7 +15,6 @@ import {
   completeTask,
   normaliseTags,
   normaliseSubtasks,
-  normaliseNotes,
   addSubtask,
   toggleSubtask,
   deleteSubtask,
