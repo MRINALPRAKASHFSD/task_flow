@@ -9,7 +9,7 @@
 
 'use strict';
 
-import { parseLocalDate, isDateOverdue } from './utils.js';
+import { isDateOverdue } from './utils.js';
 import { formatCalendarDate } from './calendar.js';
 
 export const TIME_FRAMES = Object.freeze(['7d', '30d', '90d', 'all']);
