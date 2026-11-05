@@ -11,6 +11,44 @@ TaskFlow adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Phase 4 Advanced Productivity Engine & Smart Task Management**:
+  - **Interactive Calendar Engine (`js/calendar.js`, `tests/calendar.test.js`)**:
+    - Full three-tier calendar system supporting Month grid, 7-Day Week view, and Dedicated Day view with hourly agenda and timeline.
+    - Month, week, and day navigation across boundaries, leap-year calculations, and localized headers.
+    - Dedicated Day View featuring date summary banners, overdue task alerts, all-day task aggregation, and 24-hour timeline slots with task mapping.
+    - Date task queries, day task summaries, color-coded priority dots, and day detail inspector.
+  - **Recurring Task Engine (`js/recurrence.js`, `tests/recurrence.test.js`)**:
+    - Recurrence rules supporting daily, weekly, monthly, and yearly cadences.
+    - Leap-year aware date calculation honoring month length boundaries and weekday preservation.
+    - Automated occurrence scheduling on task completion with duplicate prevention.
+  - **Productivity Analytics Engine (`js/analytics.js`, `tests/analytics.test.js`)**:
+    - Comprehensive metrics: total, completed, pending, completion rate percentage, overdue count, and average tasks per day.
+    - Time-frame filtering across 7-day, 30-day, 90-day, and all-time spans.
+    - Daily completion trend analysis with zero-dependency responsive SVG bar chart generation.
+    - Category completion rates with visual progress bars and priority distribution metrics.
+    - Qualitative, data-driven productivity insights highlighting peak performance days and momentum.
+  - **Smart Reminders Engine (`js/reminders.js`, `tests/reminders.test.js`)**:
+    - Proactive due-soon and overdue task detection.
+    - Time-specific reminder scheduling (`reminderTime`).
+    - Web Notification API dispatch with graceful fallback to in-app toast notifications.
+    - LocalStorage deduplication registry preventing duplicate alerts.
+    - Configurable settings for due-soon thresholds (12h, 24h, 48h) and notification permissions.
+  - **Advanced Task Organization (`js/tasks.js`, `js/filters.js`, `tests/organization.test.js`)**:
+    - Multi-tag classification: normalized tag chips on cards with real-time tag filtering.
+    - Subtask checklists: itemized checklist buffer in modal with progress tracker (`0/N`) on cards.
+    - Extended task notes: multiline note support with character counter and collapsible notes accordion.
+    - Dynamic task grouping: group tasks on the fly by Priority, Status, Category, or Due Date.
+  - **Command Palette (`js/palette.js`, `tests/palette.test.js`)**:
+    - Quick action dialog opened via `⌘K` / `Ctrl+K` or header button.
+    - Real-time command search across navigation, filters, themes, and settings.
+    - Full keyboard navigation (`ArrowUp`, `ArrowDown`, `Enter`, `Escape`).
+    - Strict ARIA combobox pattern with dynamic `aria-activedescendant`.
+  - **UI Integration & Multi-View Architecture (`index.html`, `css/styles.css`, `css/responsive.css`, `js/app.js`)**:
+    - Primary multi-view navigation in sidebar: Dashboard, Calendar, and Analytics.
+    - Mobile responsive drawer updated to support multi-view switching.
+    - Expanded automated test coverage from 131 to 209 unit tests across 55 suites (100% pass rate).
+    - Expanded browser test suite from 18 to 26 verified interaction workflows, including dedicated Day View verification.
+
 - **Phase 3 & 3.1 Premium UI/UX Redesign, Design System & Responsive Experience**:
   - **Design System Tokens (`css/variables.css`)**: Expanded design tokens for light and dark palettes including electric iris brand gradients, dark-mode elevated surfaces, multi-layer shadows, 4px spacing scale, and priority text/bg/border tokens.
   - **Complete SVG Icon Factory (`js/icons.js`)**: Replaced interface emojis with a zero-dependency, accessible SVG icon factory producing consistent 16x16 and 24x24 icons across task cards, modals, sidebar, toasts, and controls.

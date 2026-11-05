@@ -1,6 +1,7 @@
 /**
  * TaskFlow — app.js
- * Application controller — state coordination, DOM event wiring, and dynamic rendering.
+ * Application controller — state coordination, DOM event wiring, dynamic rendering,
+ * calendar engine, recurring tasks, analytics dashboard, smart reminders, and command palette.
  *
  * Copyright (c) 2026 Mrinal Prakash
  * SPDX-License-Identifier: MIT
@@ -32,13 +33,65 @@ import {
   isTaskOverdue,
   isTaskDueToday,
   isTaskUpcoming,
+  normaliseTags,
+  normaliseSubtasks,
+  normaliseNotes,
+  addSubtask,
+  toggleSubtask,
+  deleteSubtask,
+  getSubtaskProgress,
+  getAllTags,
   CATEGORIES,
 } from './tasks.js';
 
 import {
   applyFilters,
   sortTasks,
+  filterByTag,
+  groupTasks,
+  GROUP_BY_OPTIONS,
 } from './filters.js';
+
+import {
+  DAYS_OF_WEEK,
+  MONTH_NAMES,
+  SHORT_MONTH_NAMES,
+  formatCalendarDate,
+  getMonthGrid,
+  getWeekDays,
+  getTasksForDate,
+  getDayTaskSummary,
+  navigateDay,
+  getDayAgenda,
+} from './calendar.js';
+
+import {
+  completeRecurringTask,
+  formatRecurrenceLabel,
+} from './recurrence.js';
+
+import {
+  filterTasksByTimeFrame,
+  computeProductivityOverview,
+  computeDailyCompletionTrends,
+  computeCategoryAnalytics,
+  computePriorityAnalytics,
+  computeProductivityInsights,
+  generateTrendChartSVG,
+} from './analytics.js';
+
+import {
+  checkReminders,
+  requestNotificationPermission,
+  loadReminderPreferences,
+  saveReminderPreferences,
+  isDueSoon,
+} from './reminders.js';
+
+import {
+  createCommandPalette,
+  isPaletteTriggerEvent,
+} from './palette.js';
 
 import {
   debounce,
@@ -72,16 +125,40 @@ import {
 
 // ─── Application State ────────────────────────────────────────────────────────
 
+const now = new Date();
+
 const state = {
   /** @type {import('./tasks.js').Task[]} */
   tasks:        [],
   theme:        'light',
+  currentView:  'tasks',     // 'tasks' | 'calendar' | 'analytics'
   filter:       'all',       // 'all' | 'today' | 'upcoming' | 'overdue' | 'pending' | 'completed' | 'high'
   category:     'all',       // 'all' | 'Work' | 'Personal' | 'Study' | 'Health' | 'Finance' | 'General'
+  tagFilter:    'all',       // 'all' | string
+  groupBy:      'none',      // 'none' | 'priority' | 'category' | 'dueDate' | 'status'
   sortBy:       'default',   // 'default' | 'newest' | 'oldest' | 'priority' | 'dueDate' | 'updated'
   search:       '',
   editingId:    null,        // ID of task being edited, or null when creating
   isSubmitting: false,
+
+  // Calendar State
+  calendar: {
+    viewMode:     'month',   // 'month' | 'week' | 'day'
+    year:         now.getFullYear(),
+    month:        now.getMonth(),
+    selectedDate: formatCalendarDate(now.getFullYear(), now.getMonth(), now.getDate()),
+  },
+
+  // Analytics State
+  analytics: {
+    timeFrame: '7d',         // '7d' | '30d' | '90d' | 'all'
+  },
+
+  // Subtasks buffer for task modal
+  subtasksBuffer: [],
+
+  // Smart Reminder preferences
+  reminderPreferences: loadReminderPreferences(),
 };
 
 // ─── DOM Elements Cache ───────────────────────────────────────────────────────
@@ -93,7 +170,16 @@ const dom = {
   themeToggle:        $('theme-toggle'),
   themeIcon:          $('theme-icon'),
   btnHeaderAdd:       $('btn-header-add'),
+  btnHeaderPalette:   $('btn-header-palette'),
   btnMobileNav:       $('btn-mobile-nav'),
+
+  // Navigation Links & Views
+  navBtnTasks:        $('nav-btn-tasks'),
+  navBtnCalendar:     $('nav-btn-calendar'),
+  navBtnAnalytics:    $('nav-btn-analytics'),
+  tasksView:          $('tasks-view'),
+  calendarView:       $('calendar-view'),
+  analyticsView:      $('analytics-view'),
 
   // Welcome banner
   welcomeGreeting:    $('welcome-greeting'),
@@ -131,10 +217,14 @@ const dom = {
   // Toolbar
   searchInput:        $('search-input'),
   searchClear:        $('search-clear'),
-  filterTabs:         document.querySelectorAll('.filter-tab'),
+  filterTabs:         document.querySelectorAll('.filter-tab[data-filter]'),
   filterCategorySelect: $('filter-category-select'),
   sortSelect:         $('sort-select'),
+  groupBySelect:      $('group-by-select'),
   btnAddTask:         $('btn-add-task'),
+  activeTagIndicator: $('active-tag-indicator'),
+  activeTagBadge:     $('active-tag-badge'),
+  btnClearTag:        $('btn-clear-tag'),
 
   // Task list & Views
   viewTitle:          $('view-title'),
@@ -144,7 +234,32 @@ const dom = {
   emptyState:         $('empty-state'),
   btnEmptyAdd:        $('btn-empty-add'),
 
-  // Modal dialog
+  // Calendar DOM
+  calendarTitle:      $('calendar-title'),
+  btnCalPrev:         $('btn-cal-prev'),
+  btnCalToday:        $('btn-cal-today'),
+  btnCalNext:         $('btn-cal-next'),
+  calViewModes:       document.querySelectorAll('.calendar-view-modes button'),
+  calendarGridContainer: $('calendar-grid-container'),
+  calendarDayDetail:  $('calendar-day-detail'),
+  calDayDetailTitle:  $('cal-day-detail-title'),
+  btnCalAddForDate:   $('btn-cal-add-for-date'),
+  calDayDetailTasks:  $('cal-day-detail-tasks'),
+
+  // Analytics DOM
+  analyticsTimeframeTabs: document.querySelectorAll('.analytics-timeframe-tabs button'),
+  analyticsStatTotal:     $('analytics-stat-total'),
+  analyticsStatCompleted: $('analytics-stat-completed'),
+  analyticsStatPending:   $('analytics-stat-pending'),
+  analyticsStatOverdue:   $('analytics-stat-overdue'),
+  analyticsStatRate:      $('analytics-stat-rate'),
+  analyticsStatAvgPerDay: $('analytics-stat-avg-per-day'),
+  analyticsTrendChartContainer: $('analytics-trend-chart-container'),
+  analyticsInsightsContainer:   $('analytics-insights-container'),
+  analyticsCategoryContainer:   $('analytics-category-container'),
+  analyticsPriorityContainer:   $('analytics-priority-container'),
+
+  // Task Modal dialog
   modalOverlay:       $('modal-overlay'),
   modalTitle:         $('modal-title'),
   modalClose:         $('modal-close'),
@@ -154,11 +269,21 @@ const dom = {
   fieldPriority:      $('field-priority'),
   fieldCategory:      $('field-category'),
   fieldDueDate:       $('field-due-date'),
+  fieldReminderTime:  $('field-reminder-time'),
+  fieldRecurrence:    $('field-recurrence'),
+  recurrenceCustomWrapper: $('recurrence-custom-wrapper'),
+  fieldRecurrenceInterval: $('field-recurrence-interval'),
+  fieldTags:          $('field-tags'),
+  fieldNotes:         $('field-notes'),
+  subtasksEditorList: $('subtasks-editor-list'),
+  fieldNewSubtask:    $('field-new-subtask'),
+  btnAddSubtask:      $('btn-add-subtask'),
   errorTitle:         $('error-title'),
   errorDescription:   $('error-description'),
   errorDueDate:       $('error-due-date'),
   titleCounter:       $('title-counter'),
   descCounter:        $('desc-counter'),
+  notesCounter:       $('notes-counter'),
   btnSubmit:          $('btn-submit'),
   btnCancel:          $('btn-cancel'),
 
@@ -179,9 +304,260 @@ const dom = {
   btnClearCompleted:  $('btn-clear-completed'),
   btnClearAll:        $('btn-clear-all'),
 
+  // Smart Reminders Settings DOM
+  settingBrowserNotifications: $('setting-browser-notifications'),
+  btnRequestNotificationPerm:  $('btn-request-notification-perm'),
+  settingInappAlerts:          $('setting-inapp-alerts'),
+  settingDueSoonHours:         $('setting-due-soon-hours'),
+
+  // Command Palette DOM
+  paletteOverlay:     $('palette-overlay'),
+  paletteInput:       $('palette-input'),
+  paletteResults:     $('palette-results'),
+
   // Toast notifications
   toastContainer:     $('toast-container'),
 };
+
+// ─── Command Palette Controller ───────────────────────────────────────────────
+
+let commandPalette = null;
+
+function setupCommandPalette() {
+  const commands = [
+    {
+      id: 'nav-dashboard',
+      title: 'Go to Tasks Dashboard',
+      category: 'Navigation',
+      shortcut: 'G T',
+      keywords: ['tasks', 'dashboard', 'home', 'todo'],
+      handler: () => switchView('tasks'),
+    },
+    {
+      id: 'nav-calendar',
+      title: 'Go to Calendar View',
+      category: 'Navigation',
+      shortcut: 'G C',
+      keywords: ['calendar', 'month', 'week', 'schedule'],
+      handler: () => switchView('calendar'),
+    },
+    {
+      id: 'nav-analytics',
+      title: 'Go to Productivity Analytics',
+      category: 'Navigation',
+      shortcut: 'G A',
+      keywords: ['analytics', 'stats', 'metrics', 'trends', 'charts'],
+      handler: () => switchView('analytics'),
+    },
+    {
+      id: 'action-create-task',
+      title: 'Create New Task',
+      category: 'Actions',
+      shortcut: 'N',
+      keywords: ['add', 'new', 'create'],
+      handler: () => handleOpenAddModal(),
+    },
+    {
+      id: 'action-focus-search',
+      title: 'Search Tasks',
+      category: 'Actions',
+      shortcut: '/',
+      keywords: ['find', 'filter', 'search'],
+      handler: () => {
+        switchView('tasks');
+        setTimeout(() => dom.searchInput?.focus(), 50);
+      },
+    },
+    {
+      id: 'action-toggle-theme',
+      title: 'Toggle Dark / Light Theme',
+      category: 'Settings',
+      shortcut: 'T',
+      keywords: ['theme', 'dark', 'light', 'mode'],
+      handler: () => toggleTheme(),
+    },
+    {
+      id: 'action-open-settings',
+      title: 'Open Settings & Backups',
+      category: 'Settings',
+      shortcut: 'S',
+      keywords: ['settings', 'preferences', 'backup', 'export'],
+      handler: () => openSettings(),
+    },
+    {
+      id: 'filter-overdue',
+      title: 'View Overdue Tasks',
+      category: 'Views',
+      shortcut: 'F O',
+      keywords: ['overdue', 'late', 'expired'],
+      handler: () => {
+        state.filter = 'overdue';
+        switchView('tasks');
+        render();
+      },
+    },
+    {
+      id: 'filter-today',
+      title: 'View Tasks Due Today',
+      category: 'Views',
+      shortcut: 'F T',
+      keywords: ['today', 'due', 'schedule'],
+      handler: () => {
+        state.filter = 'today';
+        switchView('tasks');
+        render();
+      },
+    },
+    {
+      id: 'filter-high-priority',
+      title: 'View High Priority Tasks',
+      category: 'Views',
+      shortcut: 'F H',
+      keywords: ['high', 'urgent', 'priority'],
+      handler: () => {
+        state.filter = 'high';
+        switchView('tasks');
+        render();
+      },
+    },
+  ];
+
+  commandPalette = createCommandPalette({
+    commands,
+    onClose: () => {
+      if (dom.paletteOverlay) {
+        dom.paletteOverlay.classList.remove('is-open');
+        dom.paletteOverlay.setAttribute('aria-hidden', 'true');
+        setBackgroundInert(false);
+      }
+    },
+  });
+}
+
+function openPalette() {
+  if (!dom.paletteOverlay || !commandPalette) return;
+  commandPalette.open();
+  dom.paletteOverlay.classList.add('is-open');
+  dom.paletteOverlay.setAttribute('aria-hidden', 'false');
+  setBackgroundInert(true);
+  if (dom.paletteInput) {
+    dom.paletteInput.value = '';
+    dom.paletteInput.focus();
+  }
+  renderPaletteResults();
+}
+
+function closePalette() {
+  if (commandPalette) {
+    commandPalette.close();
+  }
+}
+
+function renderPaletteResults() {
+  if (!dom.paletteResults || !commandPalette) return;
+  const filtered = commandPalette.getFilteredCommands();
+  const selectedIndex = commandPalette.getSelectedIndex();
+
+  dom.paletteResults.replaceChildren();
+
+  if (filtered.length === 0) {
+    if (dom.paletteInput) dom.paletteInput.removeAttribute('aria-activedescendant');
+    const empty = document.createElement('div');
+    empty.className = 'palette-item text-muted';
+    empty.textContent = 'No matching commands found.';
+    dom.paletteResults.appendChild(empty);
+    return;
+  }
+
+  // Group commands by category
+  let currentCat = '';
+  filtered.forEach((cmd, idx) => {
+    if (cmd.category !== currentCat) {
+      currentCat = cmd.category;
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'palette-group-title';
+      groupHeader.textContent = currentCat;
+      dom.paletteResults.appendChild(groupHeader);
+    }
+
+    const item = document.createElement('div');
+    const isSelected = idx === selectedIndex;
+    item.className = `palette-item ${isSelected ? 'is-selected' : ''}`;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    item.id = `palette-item-${cmd.id}`;
+
+    if (isSelected && dom.paletteInput) {
+      dom.paletteInput.setAttribute('aria-activedescendant', `palette-item-${cmd.id}`);
+      try { item.scrollIntoView({ block: 'nearest' }); } catch (_e) {}
+    }
+
+    const left = document.createElement('div');
+    left.className = 'palette-item__left';
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'palette-item__title';
+    titleSpan.textContent = cmd.title;
+    left.appendChild(titleSpan);
+
+    item.appendChild(left);
+
+    if (cmd.shortcut) {
+      const shortcutKbd = document.createElement('kbd');
+      shortcutKbd.className = 'palette-item__shortcut';
+      shortcutKbd.textContent = cmd.shortcut;
+      item.appendChild(shortcutKbd);
+    }
+
+    item.addEventListener('click', () => {
+      commandPalette.setSelectedIndex(idx);
+      commandPalette.executeSelected();
+    });
+
+    dom.paletteResults.appendChild(item);
+  });
+}
+
+// ─── View Switching ───────────────────────────────────────────────────────────
+
+function switchView(viewName) {
+  state.currentView = viewName;
+
+  // Toggle visible containers
+  if (dom.tasksView) {
+    dom.tasksView.hidden = viewName !== 'tasks';
+    dom.tasksView.classList.toggle('is-active', viewName === 'tasks');
+  }
+  if (dom.calendarView) {
+    dom.calendarView.hidden = viewName !== 'calendar';
+    dom.calendarView.classList.toggle('is-active', viewName === 'calendar');
+  }
+  if (dom.analyticsView) {
+    dom.analyticsView.hidden = viewName !== 'analytics';
+    dom.analyticsView.classList.toggle('is-active', viewName === 'analytics');
+  }
+
+  // Update primary navigation button states
+  if (dom.navBtnTasks) {
+    dom.navBtnTasks.classList.toggle('is-active', viewName === 'tasks');
+  }
+  if (dom.navBtnCalendar) {
+    dom.navBtnCalendar.classList.toggle('is-active', viewName === 'calendar');
+  }
+  if (dom.navBtnAnalytics) {
+    dom.navBtnAnalytics.classList.toggle('is-active', viewName === 'analytics');
+  }
+
+  if (viewName === 'calendar') {
+    renderCalendar();
+  } else if (viewName === 'analytics') {
+    renderAnalytics();
+  } else {
+    render();
+  }
+
+  closeMobileNav();
+}
 
 // ─── Theme Management ─────────────────────────────────────────────────────────
 
@@ -297,7 +673,8 @@ function setBackgroundInert(inert) {
     const isAnyOpen =
       (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) ||
       (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) ||
-      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open'));
+      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) ||
+      (dom.paletteOverlay && dom.paletteOverlay.classList.contains('is-open'));
     if (!isAnyOpen) {
       layout.removeAttribute('aria-hidden');
     }
@@ -353,6 +730,18 @@ function openSettings() {
     dom.btnThemeLight.classList.toggle('is-active', state.theme === 'light');
     dom.btnThemeDark.classList.toggle('is-active', state.theme === 'dark');
   }
+
+  // Sync reminder preferences
+  if (dom.settingBrowserNotifications) {
+    dom.settingBrowserNotifications.checked = state.reminderPreferences.browserNotifications;
+  }
+  if (dom.settingInappAlerts) {
+    dom.settingInappAlerts.checked = state.reminderPreferences.inAppAlerts;
+  }
+  if (dom.settingDueSoonHours) {
+    dom.settingDueSoonHours.value = String(state.reminderPreferences.dueSoonHours);
+  }
+
   dom.settingsOverlay.classList.add('is-open');
   dom.settingsOverlay.setAttribute('aria-hidden', 'false');
   setBackgroundInert(true);
@@ -486,7 +875,7 @@ async function handleResetAllTasks() {
   showToast('All tasks have been reset.', 'info');
 }
 
-// ─── Task Modal Dialog & Character Counters ───────────────────────────────────
+// ─── Task Modal Dialog, Counters & Subtask Editor ─────────────────────────────
 
 function updateCharCounters() {
   if (dom.titleCounter && dom.fieldTitle) {
@@ -499,6 +888,47 @@ function updateCharCounters() {
     dom.descCounter.textContent = `${dLen} / 1000`;
     dom.descCounter.classList.toggle('is-limit', dLen >= 950);
   }
+  if (dom.notesCounter && dom.fieldNotes) {
+    const nLen = dom.fieldNotes.value.length;
+    dom.notesCounter.textContent = `${nLen} / 5000`;
+    dom.notesCounter.classList.toggle('is-limit', nLen >= 4900);
+  }
+}
+
+function renderSubtasksEditor() {
+  if (!dom.subtasksEditorList) return;
+  dom.subtasksEditorList.replaceChildren();
+
+  state.subtasksBuffer.forEach((sub, idx) => {
+    const item = document.createElement('div');
+    item.className = 'subtask-editor-item';
+
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = sub.completed;
+    check.addEventListener('change', () => {
+      sub.completed = check.checked;
+    });
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'subtask-editor-item__title';
+    titleSpan.textContent = sub.title;
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-icon text-muted';
+    delBtn.textContent = '✕';
+    delBtn.setAttribute('aria-label', `Remove subtask: ${sub.title}`);
+    delBtn.addEventListener('click', () => {
+      state.subtasksBuffer.splice(idx, 1);
+      renderSubtasksEditor();
+    });
+
+    item.appendChild(check);
+    item.appendChild(titleSpan);
+    item.appendChild(delBtn);
+    dom.subtasksEditorList.appendChild(item);
+  });
 }
 
 function openModal(title) {
@@ -509,6 +939,7 @@ function openModal(title) {
   setBackgroundInert(true);
   clearFormErrors();
   updateCharCounters();
+  renderSubtasksEditor();
   dom.fieldTitle.focus();
 }
 
@@ -518,6 +949,7 @@ function closeModal() {
   setBackgroundInert(false);
   resetForm();
   state.editingId = null;
+  state.subtasksBuffer = [];
   state.isSubmitting = false;
   if (modalInvokingElement && typeof modalInvokingElement.focus === 'function') {
     modalInvokingElement.focus();
@@ -530,8 +962,16 @@ function resetForm() {
   dom.fieldCategory.value = 'General';
   dom.fieldPriority.value = 'medium';
   dom.fieldDueDate.value = '';
+  if (dom.fieldReminderTime) dom.fieldReminderTime.value = '';
+  if (dom.fieldRecurrence) dom.fieldRecurrence.value = 'none';
+  if (dom.recurrenceCustomWrapper) dom.recurrenceCustomWrapper.hidden = true;
+  if (dom.fieldRecurrenceInterval) dom.fieldRecurrenceInterval.value = '1';
+  if (dom.fieldTags) dom.fieldTags.value = '';
+  if (dom.fieldNotes) dom.fieldNotes.value = '';
+  state.subtasksBuffer = [];
   clearFormErrors();
   updateCharCounters();
+  renderSubtasksEditor();
 }
 
 function showFieldError(field, errorEl, message) {
@@ -562,12 +1002,26 @@ function handleFormSubmit(event) {
 
   clearFormErrors();
 
+  const recurrenceValue = dom.fieldRecurrence?.value || 'none';
+  let recurrence = null;
+  if (recurrenceValue !== 'none') {
+    const interval = recurrenceValue === 'custom'
+      ? Math.max(1, parseInt(dom.fieldRecurrenceInterval?.value || '1', 10))
+      : 1;
+    recurrence = { type: recurrenceValue, interval };
+  }
+
   const input = {
-    title:       dom.fieldTitle.value,
-    description: dom.fieldDescription.value,
-    priority:    dom.fieldPriority.value,
-    category:    dom.fieldCategory.value,
-    dueDate:     dom.fieldDueDate.value || null,
+    title:        dom.fieldTitle.value,
+    description:  dom.fieldDescription.value,
+    priority:     dom.fieldPriority.value,
+    category:     dom.fieldCategory.value,
+    dueDate:      dom.fieldDueDate.value || null,
+    reminderTime: dom.fieldReminderTime?.value || null,
+    recurrence,
+    tags:         normaliseTags(dom.fieldTags?.value || ''),
+    subtasks:     [...state.subtasksBuffer],
+    notes:        normaliseNotes(dom.fieldNotes?.value || ''),
   };
 
   const { valid, errors } = validateTaskInput(input);
@@ -598,7 +1052,13 @@ function handleFormSubmit(event) {
 
     persistState();
     closeModal();
-    render();
+    if (state.currentView === 'calendar') {
+      renderCalendar();
+    } else if (state.currentView === 'analytics') {
+      renderAnalytics();
+    } else {
+      render();
+    }
   } catch (err) {
     showToast(err.message || 'An error occurred while saving the task.', 'error');
   } finally {
@@ -606,21 +1066,48 @@ function handleFormSubmit(event) {
   }
 }
 
-// ─── Task Actions ─────────────────────────────────────────────────────────────
+// ─── Task Actions & Recurrence Trigger ────────────────────────────────────────
 
 function handleToggleStatus(taskId) {
   const task = findTaskById(state.tasks, taskId);
   if (!task) return;
 
-  const toggled = toggleTaskStatus(task);
-  state.tasks = replaceTask(state.tasks, toggled);
-  persistState();
-  render();
+  const isCompleting = task.status !== 'completed' && !task.completed;
 
-  const msg = (toggled.status === 'completed' || toggled.completed)
-    ? 'Task marked as completed.'
-    : 'Task reopened.';
-  showToast(msg, 'success', 2200);
+  if (isCompleting && task.recurrence) {
+    // Deterministic recurrence completion engine
+    const { completedTask, nextTask } = completeRecurringTask(task, new Date());
+    state.tasks = replaceTask(state.tasks, completedTask);
+
+    if (nextTask) {
+      // Prevent duplicate occurrences
+      const existingNext = state.tasks.find(
+        t => t.title === nextTask.title && t.dueDate === nextTask.dueDate && (t.status === 'pending' || !t.completed)
+      );
+      if (!existingNext) {
+        state.tasks = addTask(state.tasks, nextTask);
+        showToast(`Task completed! Next recurrence scheduled for ${nextTask.dueDate}.`, 'success');
+      } else {
+        showToast('Task completed.', 'success');
+      }
+    }
+  } else {
+    const toggled = toggleTaskStatus(task);
+    state.tasks = replaceTask(state.tasks, toggled);
+    const msg = (toggled.status === 'completed' || toggled.completed)
+      ? 'Task marked as completed.'
+      : 'Task reopened.';
+    showToast(msg, 'success', 2200);
+  }
+
+  persistState();
+  if (state.currentView === 'calendar') {
+    renderCalendar();
+  } else if (state.currentView === 'analytics') {
+    renderAnalytics();
+  } else {
+    render();
+  }
 }
 
 async function handleDeleteTask(taskId) {
@@ -632,7 +1119,13 @@ async function handleDeleteTask(taskId) {
 
   state.tasks = deleteTask(state.tasks, taskId);
   persistState();
-  render();
+  if (state.currentView === 'calendar') {
+    renderCalendar();
+  } else if (state.currentView === 'analytics') {
+    renderAnalytics();
+  } else {
+    render();
+  }
   showToast('Task deleted.', 'info', 2500);
 }
 
@@ -647,10 +1140,33 @@ function handleEditTask(taskId) {
   dom.fieldCategory.value    = task.category || 'General';
   dom.fieldDueDate.value     = task.dueDate || '';
 
+  if (dom.fieldReminderTime) dom.fieldReminderTime.value = task.reminderTime || '';
+  if (dom.fieldRecurrence)   dom.fieldRecurrence.value   = task.recurrence?.type || 'none';
+  if (dom.recurrenceCustomWrapper) {
+    dom.recurrenceCustomWrapper.hidden = task.recurrence?.type !== 'custom';
+    if (dom.fieldRecurrenceInterval) {
+      dom.fieldRecurrenceInterval.value = String(task.recurrence?.interval || 1);
+    }
+  }
+  if (dom.fieldTags)         dom.fieldTags.value         = Array.isArray(task.tags) ? task.tags.join(', ') : '';
+  if (dom.fieldNotes)        dom.fieldNotes.value        = task.notes || '';
+
+  state.subtasksBuffer = Array.isArray(task.subtasks) ? task.subtasks.map(s => ({ ...s })) : [];
+
   openModal('Edit Task');
 }
 
-// ─── DOM Card Builder ─────────────────────────────────────────────────────────
+function handleToggleSubtask(taskId, subtaskId) {
+  const task = findTaskById(state.tasks, taskId);
+  if (!task) return;
+
+  const updated = toggleSubtask(task, subtaskId);
+  state.tasks = replaceTask(state.tasks, updated);
+  persistState();
+  renderTaskList();
+}
+
+// ─── DOM Card Builder with Tags, Subtasks & Recurrence ────────────────────────
 
 /**
  * Build a task card element using safe DOM APIs.
@@ -700,48 +1216,136 @@ function buildTaskCard(task, referenceDate) {
     body.appendChild(descEl);
   }
 
-  // Meta row
+  // Tags row
+  if (Array.isArray(task.tags) && task.tags.length > 0) {
+    const tagsWrapper = document.createElement('div');
+    tagsWrapper.className = 'task-card__tags';
+    task.tags.forEach(tag => {
+      const tagBtn = document.createElement('button');
+      tagBtn.type = 'button';
+      tagBtn.className = 'task-tag';
+      tagBtn.textContent = `#${tag}`;
+      tagBtn.setAttribute('aria-label', `Filter by tag ${tag}`);
+      tagBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.tagFilter = tag;
+        render();
+      });
+      tagsWrapper.appendChild(tagBtn);
+    });
+    body.appendChild(tagsWrapper);
+  }
+
+  // Subtasks progress and checklist
+  if (Array.isArray(task.subtasks) && task.subtasks.length > 0) {
+    const progress = getSubtaskProgress(task);
+    const subtasksWrapper = document.createElement('div');
+    subtasksWrapper.className = 'task-card__subtasks';
+
+    const progLabel = document.createElement('span');
+    progLabel.className = 'text-xs text-muted task-subtasks-summary';
+    progLabel.textContent = `Steps: ${progress.completed}/${progress.total} (${progress.percentage}%)`;
+    subtasksWrapper.appendChild(progLabel);
+
+    task.subtasks.forEach(sub => {
+      const subItem = document.createElement('label');
+      subItem.className = `subtask-checklist-item ${sub.completed ? 'is-completed' : ''}`;
+
+      const subCheck = document.createElement('input');
+      subCheck.type = 'checkbox';
+      subCheck.className = 'subtask-checkbox form-checkbox';
+      subCheck.checked = sub.completed;
+      subCheck.addEventListener('change', (e) => {
+        e.stopPropagation();
+        handleToggleSubtask(task.id, sub.id);
+      });
+
+      const subText = document.createElement('span');
+      subText.textContent = sub.title;
+
+      subItem.appendChild(subCheck);
+      subItem.appendChild(subText);
+      subtasksWrapper.appendChild(subItem);
+    });
+
+    body.appendChild(subtasksWrapper);
+  }
+
+  // Task Notes (collapsible)
+  if (task.notes) {
+    const notesToggle = document.createElement('button');
+    notesToggle.type = 'button';
+    notesToggle.className = 'task-notes-toggle';
+    notesToggle.textContent = '📝 View Notes';
+
+    const notesBody = document.createElement('div');
+    notesBody.className = 'task-notes-body';
+    notesBody.textContent = task.notes;
+    notesBody.hidden = true;
+
+    notesToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notesBody.hidden = !notesBody.hidden;
+      notesToggle.textContent = notesBody.hidden ? '📝 View Notes' : '📝 Hide Notes';
+    });
+
+    body.appendChild(notesToggle);
+    body.appendChild(notesBody);
+  }
+
+  // Meta row (Priority, Category, Due date, Recurrence, Due Soon, Status)
   const meta = document.createElement('div');
   meta.className = 'task-card__meta';
 
+  // Priority indicator
+  const prioSpan = document.createElement('span');
+  prioSpan.className = `task-card__priority badge-priority-${task.priority || 'medium'}`;
+  const dot = createPriorityDot(task.priority || 'medium');
+  if (dot) prioSpan.appendChild(dot);
+  prioSpan.appendChild(
+    document.createTextNode(
+      (task.priority || 'medium').charAt(0).toUpperCase() + (task.priority || 'medium').slice(1)
+    )
+  );
+  meta.appendChild(prioSpan);
+
   // Category badge
-  const categoryName = task.category || 'General';
-  const catSlug = categoryName.toLowerCase();
   const catBadge = document.createElement('span');
-  catBadge.className = `badge badge-cat-${catSlug} badge-category`;
-  catBadge.textContent = categoryName;
+  catBadge.className = `badge badge-cat-${(task.category || 'General').toLowerCase()}`;
+  catBadge.textContent = task.category || 'General';
   meta.appendChild(catBadge);
 
-  // Priority badge
-  const priorityBadge = document.createElement('span');
-  priorityBadge.className = `badge badge-priority-${task.priority}`;
-  const dot = createPriorityDot(task.priority);
-  if (dot) priorityBadge.appendChild(dot);
-  const pLabel = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
-  priorityBadge.appendChild(document.createTextNode(` ${pLabel}`));
-  meta.appendChild(priorityBadge);
-
-  // Due date badge (if present)
+  // Due Date & Due-Soon Badge
   if (task.dueDate) {
-    const dueBadge = document.createElement('span');
+    const dueSpan = document.createElement('span');
     const isOverdue = isTaskOverdue(task, referenceDate);
     const isToday = isTaskDueToday(task, referenceDate);
 
-    let dueClass = 'badge-due-upcoming';
-    let dueSvg = createCalendarIcon(13);
+    dueSpan.className = [
+      'task-card__due',
+      isOverdue ? 'task-card__due--overdue' : '',
+      isToday ? 'task-card__due--today' : '',
+    ].join(' ').trim();
 
-    if (isOverdue) {
-      dueClass = 'badge-due-overdue';
-      dueSvg = createAlertIcon(13);
-    } else if (isToday) {
-      dueClass = 'badge-due-today';
-      dueSvg = createClockIcon(13);
+    const calSvg = isOverdue ? createAlertIcon(13) : createCalendarIcon(13);
+    if (calSvg) dueSpan.appendChild(calSvg);
+    dueSpan.appendChild(document.createTextNode(formatDueDate(task.dueDate)));
+    meta.appendChild(dueSpan);
+
+    if (isDueSoon(task, referenceDate, state.reminderPreferences.dueSoonHours)) {
+      const soonBadge = document.createElement('span');
+      soonBadge.className = 'badge-due-soon';
+      soonBadge.textContent = 'Due Soon';
+      meta.appendChild(soonBadge);
     }
+  }
 
-    dueBadge.className = `badge ${dueClass}`;
-    if (dueSvg) dueBadge.appendChild(dueSvg);
-    dueBadge.appendChild(document.createTextNode(` ${formatDueDate(task.dueDate, referenceDate)}`));
-    meta.appendChild(dueBadge);
+  // Recurrence badge
+  if (task.recurrence) {
+    const recBadge = document.createElement('span');
+    recBadge.className = 'badge-recurrence';
+    recBadge.textContent = `↻ ${formatRecurrenceLabel(task.recurrence)}`;
+    meta.appendChild(recBadge);
   }
 
   // Status badge
@@ -794,6 +1398,590 @@ function buildTaskCard(task, referenceDate) {
   article.appendChild(actions);
 
   return article;
+}
+
+function buildDayAgendaTaskCard(task) {
+  const card = document.createElement('div');
+  card.className = `day-agenda-task-card ${task.status === 'completed' || task.completed ? 'is-completed' : ''}`;
+  card.setAttribute('role', 'listitem');
+
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.className = 'task-card__checkbox form-checkbox';
+  check.checked = task.status === 'completed' || Boolean(task.completed);
+  check.setAttribute('aria-label', `Mark task "${task.title}" as ${check.checked ? 'pending' : 'completed'}`);
+  check.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleToggleStatus(task.id);
+  });
+  card.appendChild(check);
+
+  const infoCol = document.createElement('div');
+  infoCol.className = 'day-agenda-task-info';
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'day-agenda-task-title-row';
+
+  const dot = createPriorityDot(task.priority || 'medium');
+  if (dot) titleRow.appendChild(dot);
+
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'day-agenda-task-title';
+  titleSpan.textContent = task.title;
+  titleRow.appendChild(titleSpan);
+  infoCol.appendChild(titleRow);
+
+  const metaRow = document.createElement('div');
+  metaRow.className = 'day-agenda-task-meta';
+
+  const catBadge = document.createElement('span');
+  catBadge.className = `badge badge-cat-${(task.category || 'general').toLowerCase()}`;
+  catBadge.textContent = task.category || 'General';
+  metaRow.appendChild(catBadge);
+
+  const prioBadge = document.createElement('span');
+  prioBadge.className = `badge badge-priority-${task.priority || 'medium'}`;
+  prioBadge.textContent = (task.priority || 'medium').charAt(0).toUpperCase() + (task.priority || 'medium').slice(1);
+  metaRow.appendChild(prioBadge);
+
+  if (task.reminderTime) {
+    const timeBadge = document.createElement('span');
+    timeBadge.className = 'badge badge-reminder-time';
+    timeBadge.textContent = `⏰ ${task.reminderTime}`;
+    metaRow.appendChild(timeBadge);
+  }
+
+  if (task.recurrence && task.recurrence.type !== 'none') {
+    const recBadge = document.createElement('span');
+    recBadge.className = 'badge badge-recurrence';
+    recBadge.textContent = `🔁 ${formatRecurrenceLabel(task.recurrence)}`;
+    metaRow.appendChild(recBadge);
+  }
+
+  infoCol.appendChild(metaRow);
+  card.appendChild(infoCol);
+
+  const actions = document.createElement('div');
+  actions.className = 'day-agenda-task-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.className = 'task-action-btn task-action-btn--edit';
+  editBtn.setAttribute('aria-label', `Edit "${task.title}"`);
+  editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+  editBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleEditTask(task.id);
+  });
+  actions.appendChild(editBtn);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'task-action-btn task-action-btn--delete';
+  delBtn.setAttribute('aria-label', `Delete "${task.title}"`);
+  delBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleDeleteTask(task.id);
+  });
+  actions.appendChild(delBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+// ─── Calendar View Rendering ──────────────────────────────────────────────────
+
+function renderCalendar() {
+  if (!dom.calendarGridContainer) return;
+  const { year, month, selectedDate, viewMode } = state.calendar;
+
+  // Title update
+  if (dom.calendarTitle) {
+    if (viewMode === 'day') {
+      const agenda = getDayAgenda(selectedDate, state.tasks);
+      dom.calendarTitle.textContent = `${agenda.dayFullName}, ${agenda.monthName} ${agenda.dayNumber}, ${agenda.year}`;
+    } else if (viewMode === 'week') {
+      const weekDays = getWeekDays(selectedDate);
+      const start = weekDays[0];
+      const end = weekDays[6];
+      if (start.month === end.month) {
+        dom.calendarTitle.textContent = `${MONTH_NAMES[start.month]} ${start.dayNumber} – ${end.dayNumber}, ${start.year}`;
+      } else {
+        dom.calendarTitle.textContent = `${SHORT_MONTH_NAMES[start.month]} ${start.dayNumber} – ${SHORT_MONTH_NAMES[end.month]} ${end.dayNumber}, ${end.year}`;
+      }
+    } else {
+      dom.calendarTitle.textContent = `${MONTH_NAMES[month]} ${year}`;
+    }
+  }
+
+  // View modes button state
+  dom.calViewModes.forEach(btn => {
+    const mode = btn.getAttribute('data-cal-view');
+    btn.classList.toggle('is-active', mode === viewMode);
+    btn.setAttribute('aria-pressed', mode === viewMode ? 'true' : 'false');
+  });
+
+  dom.calendarGridContainer.replaceChildren();
+
+  if (viewMode === 'day') {
+    const agenda = getDayAgenda(selectedDate, state.tasks);
+    const dayWrapper = document.createElement('div');
+    dayWrapper.id = 'calendar-grid-day';
+    dayWrapper.className = 'calendar-day-agenda';
+    dayWrapper.setAttribute('role', 'region');
+    dayWrapper.setAttribute('aria-label', `Day agenda for ${agenda.dayFullName}, ${agenda.monthName} ${agenda.dayNumber}`);
+
+    // 1. Header summary banner
+    const headerBanner = document.createElement('div');
+    headerBanner.className = 'day-agenda-header';
+
+    const headerTitleCol = document.createElement('div');
+    const h3 = document.createElement('h3');
+    h3.className = 'day-agenda-title';
+    h3.textContent = `${agenda.dayFullName}, ${agenda.monthName} ${agenda.dayNumber}, ${agenda.year}`;
+    headerTitleCol.appendChild(h3);
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'day-agenda-meta';
+    if (agenda.isToday) {
+      const todayBadge = document.createElement('span');
+      todayBadge.className = 'badge badge-today';
+      todayBadge.textContent = 'Today';
+      metaRow.appendChild(todayBadge);
+    }
+    const totalBadge = document.createElement('span');
+    totalBadge.className = 'badge badge-cat-general';
+    totalBadge.textContent = `${agenda.summary.total} Scheduled`;
+    metaRow.appendChild(totalBadge);
+
+    const compBadge = document.createElement('span');
+    compBadge.className = 'badge badge-priority-low';
+    compBadge.textContent = `${agenda.summary.completed} Completed`;
+    metaRow.appendChild(compBadge);
+
+    if (agenda.summary.pending > 0) {
+      const pendBadge = document.createElement('span');
+      pendBadge.className = 'badge badge-priority-medium';
+      pendBadge.textContent = `${agenda.summary.pending} Pending`;
+      metaRow.appendChild(pendBadge);
+    }
+    headerTitleCol.appendChild(metaRow);
+    headerBanner.appendChild(headerTitleCol);
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-primary btn-sm';
+    addBtn.id = 'btn-day-add-task';
+    addBtn.innerHTML = `<span>+ Add Task</span>`;
+    addBtn.addEventListener('click', () => handleOpenAddModal(agenda.dateString));
+    headerBanner.appendChild(addBtn);
+
+    dayWrapper.appendChild(headerBanner);
+
+    // 2. Overdue Alert Section (if any overdue tasks)
+    if (agenda.overdueTasks.length > 0) {
+      const overdueSection = document.createElement('div');
+      overdueSection.className = 'day-agenda-section day-agenda-section--overdue';
+
+      const secHeader = document.createElement('h4');
+      secHeader.className = 'day-agenda-section-title text-danger';
+      secHeader.textContent = `⚠️ Overdue from Previous Days (${agenda.overdueTasks.length})`;
+      overdueSection.appendChild(secHeader);
+
+      const overdueList = document.createElement('div');
+      overdueList.className = 'day-agenda-task-list';
+      agenda.overdueTasks.forEach(task => {
+        overdueList.appendChild(buildDayAgendaTaskCard(task));
+      });
+      overdueSection.appendChild(overdueList);
+      dayWrapper.appendChild(overdueSection);
+    }
+
+    // 3. All-Day / Scheduled Tasks Section
+    const allDaySection = document.createElement('div');
+    allDaySection.className = 'day-agenda-section';
+
+    const allDayHeader = document.createElement('h4');
+    allDayHeader.className = 'day-agenda-section-title';
+    allDayHeader.textContent = `📅 All-Day & Scheduled Tasks (${agenda.allDayTasks.length})`;
+    allDaySection.appendChild(allDayHeader);
+
+    if (agenda.allDayTasks.length === 0) {
+      const emptyP = document.createElement('p');
+      emptyP.className = 'text-muted text-xs';
+      emptyP.textContent = 'No all-day tasks scheduled for this date.';
+      allDaySection.appendChild(emptyP);
+    } else {
+      const allDayList = document.createElement('div');
+      allDayList.className = 'day-agenda-task-list';
+      agenda.allDayTasks.forEach(task => {
+        allDayList.appendChild(buildDayAgendaTaskCard(task));
+      });
+      allDaySection.appendChild(allDayList);
+    }
+    dayWrapper.appendChild(allDaySection);
+
+    // 4. Hourly Timeline
+    const timelineSection = document.createElement('div');
+    timelineSection.className = 'day-agenda-section';
+
+    const timeHeader = document.createElement('h4');
+    timeHeader.className = 'day-agenda-section-title';
+    timeHeader.textContent = `⏰ Hourly Schedule (${agenda.timedTasks.length} timed)`;
+    timelineSection.appendChild(timeHeader);
+
+    const timelineContainer = document.createElement('div');
+    timelineContainer.className = 'day-agenda-timeline';
+
+    agenda.hourlySlots.forEach(slot => {
+      const hasTasks = slot.tasks.length > 0;
+      const isWorkingHour = slot.hour >= 7 && slot.hour <= 20;
+      if (!hasTasks && !isWorkingHour) return;
+
+      const row = document.createElement('div');
+      row.className = `agenda-hour-row ${hasTasks ? 'has-tasks' : ''}`;
+
+      const timeCol = document.createElement('div');
+      timeCol.className = 'agenda-hour-time';
+      timeCol.textContent = slot.label;
+      row.appendChild(timeCol);
+
+      const contentCol = document.createElement('div');
+      contentCol.className = 'agenda-hour-content';
+
+      if (hasTasks) {
+        slot.tasks.forEach(task => {
+          contentCol.appendChild(buildDayAgendaTaskCard(task));
+        });
+      } else {
+        const addSlotBtn = document.createElement('button');
+        addSlotBtn.type = 'button';
+        addSlotBtn.className = 'agenda-empty-slot';
+        addSlotBtn.textContent = `+ Add at ${slot.label}`;
+        addSlotBtn.setAttribute('aria-label', `Add task for ${slot.label}`);
+        addSlotBtn.addEventListener('click', () => {
+          handleOpenAddModal(agenda.dateString);
+          if (dom.fieldReminderTime) dom.fieldReminderTime.value = slot.timeString;
+        });
+        contentCol.appendChild(addSlotBtn);
+      }
+      row.appendChild(contentCol);
+      timelineContainer.appendChild(row);
+    });
+
+    timelineSection.appendChild(timelineContainer);
+    dayWrapper.appendChild(timelineSection);
+
+    dom.calendarGridContainer.appendChild(dayWrapper);
+  } else if (viewMode === 'week') {
+    // Dedicated 7-day weekly layout
+    const weekWrapper = document.createElement('div');
+    weekWrapper.id = 'calendar-grid-week';
+    weekWrapper.className = 'calendar-grid calendar-grid--week';
+
+    const weekDays = getWeekDays(selectedDate);
+    // Weekday column headers
+    weekDays.forEach(day => {
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'calendar-weekday';
+      dayHeader.textContent = `${day.dayName} ${day.dayNumber}`;
+      weekWrapper.appendChild(dayHeader);
+    });
+
+    weekDays.forEach(day => {
+      const cell = document.createElement('div');
+      cell.className = [
+        'calendar-day-cell',
+        'calendar-day-cell--week',
+        day.isToday ? 'is-today' : '',
+        day.dateString === selectedDate ? 'is-selected' : '',
+      ].join(' ').trim();
+
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('aria-label', `${day.dayFullName}, ${day.dateString}`);
+
+      const header = document.createElement('div');
+      header.className = 'calendar-day-header';
+
+      const numSpan = document.createElement('span');
+      numSpan.className = 'calendar-day-number';
+      numSpan.textContent = String(day.dayNumber);
+      header.appendChild(numSpan);
+
+      const dayTasks = getTasksForDate(state.tasks, day.dateString);
+      const summary = getDayTaskSummary(dayTasks, new Date());
+
+      if (summary.total > 0) {
+        const badge = document.createElement('span');
+        badge.className = `calendar-day-badge ${summary.overdue > 0 ? 'calendar-day-badge--overdue' : ''}`;
+        badge.textContent = `${summary.completed}/${summary.total}`;
+        header.appendChild(badge);
+      }
+
+      cell.appendChild(header);
+
+      if (dayTasks.length > 0) {
+        const pillContainer = document.createElement('div');
+        pillContainer.className = 'calendar-day-tasks';
+        dayTasks.forEach(t => {
+          const pill = document.createElement('div');
+          pill.className = `calendar-task-pill ${t.status === 'completed' || t.completed ? 'is-completed' : ''} ${t.priority === 'high' ? 'calendar-task-pill--high' : ''}`;
+          pill.textContent = t.title;
+          pillContainer.appendChild(pill);
+        });
+        cell.appendChild(pillContainer);
+      }
+
+      cell.addEventListener('click', () => {
+        state.calendar.selectedDate = day.dateString;
+        renderCalendar();
+      });
+
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          state.calendar.selectedDate = day.dateString;
+          renderCalendar();
+        }
+      });
+
+      weekWrapper.appendChild(cell);
+    });
+
+    dom.calendarGridContainer.appendChild(weekWrapper);
+  } else {
+    // Month Grid
+    const gridWrapper = document.createElement('div');
+    gridWrapper.id = 'calendar-grid-month';
+    gridWrapper.className = 'calendar-grid';
+
+    // Weekday column headers
+    DAYS_OF_WEEK.forEach(dayName => {
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'calendar-weekday';
+      dayHeader.textContent = dayName;
+      gridWrapper.appendChild(dayHeader);
+    });
+
+    // Calculate grid slots
+    const slots = getMonthGrid(year, month);
+    slots.forEach(slot => {
+      const cell = document.createElement('div');
+      cell.className = [
+        'calendar-day-cell',
+        slot.isCurrentMonth ? '' : 'is-other-month',
+        slot.isToday ? 'is-today' : '',
+        slot.dateString === selectedDate ? 'is-selected' : '',
+      ].join(' ').trim();
+
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('aria-label', `${slot.dateString}`);
+
+      const header = document.createElement('div');
+      header.className = 'calendar-day-header';
+
+      const numSpan = document.createElement('span');
+      numSpan.className = 'calendar-day-number';
+      numSpan.textContent = String(slot.dayNumber || slot.day || '');
+      header.appendChild(numSpan);
+
+      const dayTasks = getTasksForDate(state.tasks, slot.dateString);
+      const summary = getDayTaskSummary(dayTasks, new Date());
+
+      if (summary.total > 0) {
+        const badge = document.createElement('span');
+        badge.className = `calendar-day-badge ${summary.overdue > 0 ? 'calendar-day-badge--overdue' : ''}`;
+        badge.textContent = `${summary.completed}/${summary.total}`;
+        header.appendChild(badge);
+      }
+
+      cell.appendChild(header);
+
+      // Render task pills inside day cell
+      if (dayTasks.length > 0) {
+        const pillContainer = document.createElement('div');
+        pillContainer.className = 'calendar-day-tasks';
+        dayTasks.slice(0, 3).forEach(t => {
+          const pill = document.createElement('div');
+          pill.className = `calendar-task-pill ${t.status === 'completed' || t.completed ? 'is-completed' : ''} ${t.priority === 'high' ? 'calendar-task-pill--high' : ''}`;
+          pill.textContent = t.title;
+          pillContainer.appendChild(pill);
+        });
+        if (dayTasks.length > 3) {
+          const more = document.createElement('div');
+          more.className = 'text-xs text-muted';
+          more.textContent = `+${dayTasks.length - 3} more`;
+          pillContainer.appendChild(more);
+        }
+        cell.appendChild(pillContainer);
+      }
+
+      cell.addEventListener('click', () => {
+        state.calendar.selectedDate = slot.dateString;
+        renderCalendar();
+      });
+
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          state.calendar.selectedDate = slot.dateString;
+          renderCalendar();
+        }
+      });
+
+      gridWrapper.appendChild(cell);
+    });
+
+    dom.calendarGridContainer.appendChild(gridWrapper);
+  }
+
+  renderCalendarDayDetail();
+}
+
+function renderCalendarDayDetail() {
+  if (dom.calendarDayDetail) {
+    dom.calendarDayDetail.hidden = (state.calendar.viewMode === 'day');
+  }
+  if (!dom.calDayDetailTasks || !dom.calDayDetailTitle) return;
+  const { selectedDate } = state.calendar;
+
+  dom.calDayDetailTitle.textContent = `Tasks for ${selectedDate}`;
+  dom.calDayDetailTasks.replaceChildren();
+
+  const dayTasks = getTasksForDate(state.tasks, selectedDate);
+  if (dayTasks.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'text-muted text-sm';
+    empty.textContent = 'No tasks scheduled for this day.';
+    dom.calDayDetailTasks.appendChild(empty);
+    return;
+  }
+
+  const now = new Date();
+  dayTasks.forEach(task => {
+    dom.calDayDetailTasks.appendChild(buildTaskCard(task, now));
+  });
+}
+
+// ─── Analytics View Rendering ─────────────────────────────────────────────────
+
+function renderAnalytics() {
+  if (!dom.analyticsView) return;
+  const { timeFrame } = state.analytics;
+
+  // Sync timeframe tab buttons
+  dom.analyticsTimeframeTabs.forEach(btn => {
+    const tf = btn.getAttribute('data-timeframe');
+    btn.classList.toggle('is-active', tf === timeFrame);
+    btn.setAttribute('aria-pressed', tf === timeFrame ? 'true' : 'false');
+  });
+
+  const filteredTasks = filterTasksByTimeFrame(state.tasks, timeFrame);
+  const overview = computeProductivityOverview(filteredTasks);
+
+  if (dom.analyticsStatTotal)     setText(dom.analyticsStatTotal, overview.total);
+  if (dom.analyticsStatCompleted) setText(dom.analyticsStatCompleted, overview.completed);
+  if (dom.analyticsStatPending)   setText(dom.analyticsStatPending, overview.pending);
+  if (dom.analyticsStatOverdue)   setText(dom.analyticsStatOverdue, overview.overdue);
+  if (dom.analyticsStatRate)      setText(dom.analyticsStatRate, `${overview.completionRate}%`);
+  if (dom.analyticsStatAvgPerDay) {
+    const daysMap = { '7d': 7, '30d': 30, '90d': 90, 'all': 30 };
+    const timeFrameDays = daysMap[timeFrame] || 7;
+    const avg = overview.averagePerDay !== undefined ? overview.averagePerDay : Number((overview.completed / timeFrameDays).toFixed(1));
+    setText(dom.analyticsStatAvgPerDay, avg);
+  }
+
+  // Completion Trend Chart (Pure SVG)
+  if (dom.analyticsTrendChartContainer) {
+    const trendDays = timeFrame === '7d' ? 7 : (timeFrame === '30d' ? 14 : 30);
+    const trends = computeDailyCompletionTrends(state.tasks, trendDays);
+    const svgString = generateTrendChartSVG(trends);
+    dom.analyticsTrendChartContainer.innerHTML = svgString;
+  }
+
+  // Category Performance
+  if (dom.analyticsCategoryContainer) {
+    dom.analyticsCategoryContainer.replaceChildren();
+    const catStats = computeCategoryAnalytics(filteredTasks);
+    catStats.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'analytics-breakdown-row';
+
+      const meta = document.createElement('div');
+      meta.className = 'analytics-breakdown-meta';
+      const labelSpan = document.createElement('span');
+      const strong = document.createElement('strong');
+      strong.textContent = item.category;
+      labelSpan.appendChild(strong);
+      labelSpan.appendChild(document.createTextNode(` (${item.completed}/${item.total})`));
+      const rateSpan = document.createElement('span');
+      const categoryRate = item.rate !== undefined ? item.rate : item.completionRate;
+      rateSpan.textContent = `${categoryRate}%`;
+      meta.appendChild(labelSpan);
+      meta.appendChild(rateSpan);
+
+      const bar = document.createElement('div');
+      bar.className = 'analytics-breakdown-bar';
+      const fill = document.createElement('div');
+      fill.className = 'analytics-breakdown-fill';
+      fill.style.width = `${categoryRate}%`;
+      bar.appendChild(fill);
+
+      row.appendChild(meta);
+      row.appendChild(bar);
+      dom.analyticsCategoryContainer.appendChild(row);
+    });
+  }
+
+  // Priority Distribution
+  if (dom.analyticsPriorityContainer) {
+    dom.analyticsPriorityContainer.replaceChildren();
+    const prioStats = computePriorityAnalytics(filteredTasks);
+    const prioOrder = ['high', 'medium', 'low'];
+
+    prioOrder.forEach(p => {
+      const item = prioStats[p];
+      const row = document.createElement('div');
+      row.className = 'analytics-breakdown-row';
+
+      const labelCapital = p.charAt(0).toUpperCase() + p.slice(1);
+      const meta = document.createElement('div');
+      meta.className = 'analytics-breakdown-meta';
+      const labelSpan = document.createElement('span');
+      const strong = document.createElement('strong');
+      strong.textContent = `${labelCapital} Priority`;
+      labelSpan.appendChild(strong);
+      const taskCount = item.total !== undefined ? item.total : item.count;
+      labelSpan.appendChild(document.createTextNode(` (${taskCount} tasks)`));
+      const rateSpan = document.createElement('span');
+      rateSpan.textContent = `${item.percentage}%`;
+      meta.appendChild(labelSpan);
+      meta.appendChild(rateSpan);
+
+      const bar = document.createElement('div');
+      bar.className = 'analytics-breakdown-bar';
+      const fill = document.createElement('div');
+      fill.className = 'analytics-breakdown-fill';
+      fill.style.width = `${item.percentage}%`;
+      if (p === 'high') fill.style.background = 'var(--color-danger)';
+      if (p === 'medium') fill.style.background = 'var(--color-warning)';
+      if (p === 'low') fill.style.background = 'var(--color-success)';
+      bar.appendChild(fill);
+
+      row.appendChild(meta);
+      row.appendChild(bar);
+      dom.analyticsPriorityContainer.appendChild(row);
+    });
+  }
+
+  // Productivity Insights
+  if (dom.analyticsInsightsContainer) {
+    const insightText = computeProductivityInsights(state.tasks);
+    dom.analyticsInsightsContainer.textContent = insightText;
+  }
 }
 
 // ─── Rendering Methods ────────────────────────────────────────────────────────
@@ -895,13 +2083,24 @@ function updateViewTitle() {
       dom.viewCategoryBadge.hidden = true;
     }
   }
+
+  // Update active tag chip indicator
+  if (dom.activeTagIndicator && dom.activeTagBadge) {
+    if (state.tagFilter && state.tagFilter !== 'all') {
+      dom.activeTagIndicator.hidden = false;
+      dom.activeTagBadge.textContent = `#${state.tagFilter}`;
+    } else {
+      dom.activeTagIndicator.hidden = true;
+    }
+  }
 }
 
 function renderTaskList() {
   const now = new Date();
-  const visible = applyFilters(state.tasks, {
+  let visible = applyFilters(state.tasks, {
     status:   state.filter,
     category: state.category,
+    tag:      state.tagFilter,
     search:   state.search,
     sortBy:   state.sortBy,
   }, now);
@@ -919,9 +2118,32 @@ function renderTaskList() {
     dom.taskList.style.display = 'flex';
 
     const frag = document.createDocumentFragment();
-    for (const task of visible) {
-      frag.appendChild(buildTaskCard(task, now));
+
+    if (state.groupBy && state.groupBy !== 'none') {
+      const groups = groupTasks(visible, state.groupBy, now);
+      groups.forEach(grp => {
+        if (grp.count > 0) {
+          const groupWrapper = document.createElement('div');
+          groupWrapper.className = 'task-group';
+
+          const groupHeader = document.createElement('h3');
+          groupHeader.className = 'group-header';
+          groupHeader.textContent = `${grp.label} (${grp.count})`;
+          groupWrapper.appendChild(groupHeader);
+
+          grp.tasks.forEach(task => {
+            groupWrapper.appendChild(buildTaskCard(task, now));
+          });
+
+          frag.appendChild(groupWrapper);
+        }
+      });
+    } else {
+      for (const task of visible) {
+        frag.appendChild(buildTaskCard(task, now));
+      }
     }
+
     dom.taskList.appendChild(frag);
   }
 }
@@ -946,13 +2168,37 @@ function render() {
 
 // ─── Modal Openers ───────────────────────────────────────────────────────────
 
-function handleOpenAddModal() {
+function handleOpenAddModal(initialDate = null) {
   state.editingId = null;
   resetForm();
   if (state.category && state.category !== 'all') {
     dom.fieldCategory.value = state.category;
   }
+  if (initialDate && typeof initialDate === 'string') {
+    dom.fieldDueDate.value = initialDate;
+  }
   openModal('Add New Task');
+}
+
+// ─── Smart Reminders Engine ───────────────────────────────────────────────────
+
+function triggerSmartRemindersCheck() {
+  checkReminders(state.tasks, {
+    preferences: state.reminderPreferences,
+    onInAppNotify: (notification) => {
+      showToast(notification.message, notification.type === 'overdue' ? 'error' : 'info', 5000);
+    },
+    onBrowserNotify: (notification) => {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('TaskFlow Reminder', {
+            body: notification.message,
+            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%234f46e5"/></svg>',
+          });
+        } catch (_) {}
+      }
+    },
+  });
 }
 
 // ─── Event Wiring ─────────────────────────────────────────────────────────────
@@ -965,10 +2211,211 @@ function wireEvents() {
   if (dom.btnMobileNav) dom.btnMobileNav.addEventListener('click', openMobileNav);
   if (dom.sidebarOverlay) dom.sidebarOverlay.addEventListener('click', closeMobileNav);
 
+  // Primary Navigation View Switches
+  if (dom.navBtnTasks) dom.navBtnTasks.addEventListener('click', () => switchView('tasks'));
+  if (dom.navBtnCalendar) dom.navBtnCalendar.addEventListener('click', () => switchView('calendar'));
+  if (dom.navBtnAnalytics) dom.navBtnAnalytics.addEventListener('click', () => switchView('analytics'));
+
+  // Command Palette Openers
+  if (dom.btnHeaderPalette) dom.btnHeaderPalette.addEventListener('click', openPalette);
+  if (dom.paletteOverlay) {
+    dom.paletteOverlay.addEventListener('click', (e) => {
+      if (e.target === dom.paletteOverlay) closePalette();
+    });
+  }
+
+  if (dom.paletteInput) {
+    dom.paletteInput.addEventListener('input', (e) => {
+      if (commandPalette) {
+        commandPalette.setQuery(e.target.value);
+        renderPaletteResults();
+      }
+    });
+
+    dom.paletteInput.addEventListener('keydown', (e) => {
+      if (!commandPalette) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        commandPalette.selectNext();
+        renderPaletteResults();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        commandPalette.selectPrevious();
+        renderPaletteResults();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        commandPalette.executeSelected();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closePalette();
+      }
+    });
+  }
+
+  // Calendar Controls
+  if (dom.btnCalPrev) {
+    dom.btnCalPrev.addEventListener('click', () => {
+      if (state.calendar.viewMode === 'day') {
+        const next = navigateDay(state.calendar.selectedDate, -1);
+        state.calendar.selectedDate = next.dateString;
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
+      } else if (state.calendar.viewMode === 'week') {
+        const cur = new Date(`${state.calendar.selectedDate}T00:00:00`);
+        cur.setDate(cur.getDate() - 7);
+        state.calendar.year = cur.getFullYear();
+        state.calendar.month = cur.getMonth();
+        state.calendar.selectedDate = formatCalendarDate(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      } else {
+        if (state.calendar.month === 0) {
+          state.calendar.month = 11;
+          state.calendar.year -= 1;
+        } else {
+          state.calendar.month -= 1;
+        }
+      }
+      renderCalendar();
+    });
+  }
+
+  if (dom.btnCalNext) {
+    dom.btnCalNext.addEventListener('click', () => {
+      if (state.calendar.viewMode === 'day') {
+        const next = navigateDay(state.calendar.selectedDate, 1);
+        state.calendar.selectedDate = next.dateString;
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
+      } else if (state.calendar.viewMode === 'week') {
+        const cur = new Date(`${state.calendar.selectedDate}T00:00:00`);
+        cur.setDate(cur.getDate() + 7);
+        state.calendar.year = cur.getFullYear();
+        state.calendar.month = cur.getMonth();
+        state.calendar.selectedDate = formatCalendarDate(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      } else {
+        if (state.calendar.month === 11) {
+          state.calendar.month = 0;
+          state.calendar.year += 1;
+        } else {
+          state.calendar.month += 1;
+        }
+      }
+      renderCalendar();
+    });
+  }
+
+  if (dom.btnCalToday) {
+    dom.btnCalToday.addEventListener('click', () => {
+      const today = new Date();
+      state.calendar.year = today.getFullYear();
+      state.calendar.month = today.getMonth();
+      state.calendar.selectedDate = formatCalendarDate(today.getFullYear(), today.getMonth(), today.getDate());
+      renderCalendar();
+    });
+  }
+
+  dom.calViewModes.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      state.calendar.viewMode = e.currentTarget.getAttribute('data-cal-view');
+      renderCalendar();
+    });
+  });
+
+  if (dom.btnCalAddForDate) {
+    dom.btnCalAddForDate.addEventListener('click', () => {
+      handleOpenAddModal(state.calendar.selectedDate);
+    });
+  }
+
+  // Analytics Timeframe Tabs
+  dom.analyticsTimeframeTabs.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      state.analytics.timeFrame = e.currentTarget.getAttribute('data-timeframe');
+      renderAnalytics();
+    });
+  });
+
+  // Group By Select
+  if (dom.groupBySelect) {
+    dom.groupBySelect.addEventListener('change', (e) => {
+      state.groupBy = e.target.value;
+      renderTaskList();
+    });
+  }
+
+  // Clear Tag Filter
+  if (dom.btnClearTag) {
+    dom.btnClearTag.addEventListener('click', () => {
+      state.tagFilter = 'all';
+      render();
+    });
+  }
+
+  // Subtask Add Button in Modal
+  if (dom.btnAddSubtask && dom.fieldNewSubtask) {
+    const handleSubtaskAdd = () => {
+      const title = dom.fieldNewSubtask.value.trim();
+      if (title) {
+        state.subtasksBuffer.push({
+          id: (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9)),
+          title,
+          completed: false,
+        });
+        dom.fieldNewSubtask.value = '';
+        renderSubtasksEditor();
+      }
+    };
+
+    dom.btnAddSubtask.addEventListener('click', handleSubtaskAdd);
+    dom.fieldNewSubtask.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubtaskAdd();
+      }
+    });
+  }
+
+  // Smart Reminders Settings Controls
+  if (dom.settingBrowserNotifications) {
+    dom.settingBrowserNotifications.addEventListener('change', (e) => {
+      state.reminderPreferences.browserNotifications = e.target.checked;
+      saveReminderPreferences(state.reminderPreferences);
+    });
+  }
+
+  if (dom.btnRequestNotificationPerm) {
+    dom.btnRequestNotificationPerm.addEventListener('click', async () => {
+      const res = await requestNotificationPermission();
+      if (res === 'granted') {
+        state.reminderPreferences.browserNotifications = true;
+        if (dom.settingBrowserNotifications) dom.settingBrowserNotifications.checked = true;
+        saveReminderPreferences(state.reminderPreferences);
+        showToast('Browser notifications permission granted.', 'success');
+      } else if (res === 'denied') {
+        showToast('Browser notifications permission was denied in browser settings.', 'error');
+      } else {
+        showToast('Notifications are not supported in this browser.', 'info');
+      }
+    });
+  }
+
+  if (dom.settingInappAlerts) {
+    dom.settingInappAlerts.addEventListener('change', (e) => {
+      state.reminderPreferences.inAppAlerts = e.target.checked;
+      saveReminderPreferences(state.reminderPreferences);
+    });
+  }
+
+  if (dom.settingDueSoonHours) {
+    dom.settingDueSoonHours.addEventListener('change', (e) => {
+      state.reminderPreferences.dueSoonHours = parseInt(e.target.value, 10);
+      saveReminderPreferences(state.reminderPreferences);
+    });
+  }
+
   // Add Task Buttons
-  dom.btnAddTask.addEventListener('click', handleOpenAddModal);
-  if (dom.btnHeaderAdd) dom.btnHeaderAdd.addEventListener('click', handleOpenAddModal);
-  if (dom.btnEmptyAdd)  dom.btnEmptyAdd.addEventListener('click', handleOpenAddModal);
+  dom.btnAddTask.addEventListener('click', () => handleOpenAddModal());
+  if (dom.btnHeaderAdd) dom.btnHeaderAdd.addEventListener('click', () => handleOpenAddModal());
+  if (dom.btnEmptyAdd)  dom.btnEmptyAdd.addEventListener('click', () => handleOpenAddModal());
 
   // Modal Cancel & Close
   dom.modalClose.addEventListener('click', closeModal);
@@ -977,7 +2424,14 @@ function wireEvents() {
     if (e.target === dom.modalOverlay) closeModal();
   });
 
-  // Modal Form Submission
+  // Modal Form Submission & Recurrence Toggle
+  if (dom.fieldRecurrence) {
+    dom.fieldRecurrence.addEventListener('change', (e) => {
+      if (dom.recurrenceCustomWrapper) {
+        dom.recurrenceCustomWrapper.hidden = e.target.value !== 'custom';
+      }
+    });
+  }
   dom.taskForm.addEventListener('submit', handleFormSubmit);
 
   // Sidebar Filter Links
@@ -1004,7 +2458,11 @@ function wireEvents() {
         tab.classList.toggle('is-active', tab.getAttribute('data-filter') === f);
       });
 
-      render();
+      if (state.currentView !== 'tasks') {
+        switchView('tasks');
+      } else {
+        render();
+      }
       closeMobileNav();
     });
   });
@@ -1017,7 +2475,11 @@ function wireEvents() {
         state.category = cat;
         if (dom.filterCategorySelect) dom.filterCategorySelect.value = cat;
         persistState();
-        render();
+        if (state.currentView !== 'tasks') {
+          switchView('tasks');
+        } else {
+          render();
+        }
         closeMobileNav();
       });
     });
@@ -1142,6 +2604,7 @@ function wireEvents() {
   // Form Character Counters
   if (dom.fieldTitle) dom.fieldTitle.addEventListener('input', updateCharCounters);
   if (dom.fieldDescription) dom.fieldDescription.addEventListener('input', updateCharCounters);
+  if (dom.fieldNotes) dom.fieldNotes.addEventListener('input', updateCharCounters);
 
   // Keyboard navigation & Shortcuts
   document.addEventListener('keydown', (e) => {
@@ -1149,7 +2612,19 @@ function wireEvents() {
     const isAnyModalOpen =
       (dom.modalOverlay && dom.modalOverlay.classList.contains('is-open')) ||
       (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) ||
-      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open'));
+      (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) ||
+      (dom.paletteOverlay && dom.paletteOverlay.classList.contains('is-open'));
+
+    // Command Palette Trigger: Cmd+K / Ctrl+K
+    if (isPaletteTriggerEvent(e)) {
+      e.preventDefault();
+      if (dom.paletteOverlay && dom.paletteOverlay.classList.contains('is-open')) {
+        closePalette();
+      } else {
+        openPalette();
+      }
+      return;
+    }
 
     // '/' jumps focus to search
     if (e.key === '/' && !isEditingText && !isAnyModalOpen) {
@@ -1167,6 +2642,10 @@ function wireEvents() {
 
     // 1. Priority order for Escape: topmost dialog closes first
     if (e.key === 'Escape') {
+      if (dom.paletteOverlay && dom.paletteOverlay.classList.contains('is-open')) {
+        closePalette();
+        return;
+      }
       if (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) {
         closeConfirm(false);
         return;
@@ -1187,6 +2666,10 @@ function wireEvents() {
 
     // 2. Focus trapping on Tab and Shift + Tab
     if (e.key === 'Tab') {
+      if (dom.paletteOverlay && dom.paletteOverlay.classList.contains('is-open')) {
+        trapFocus(e, dom.paletteOverlay);
+        return;
+      }
       if (dom.confirmOverlay && dom.confirmOverlay.classList.contains('is-open')) {
         trapFocus(e, dom.confirmOverlay);
         return;
@@ -1234,6 +2717,10 @@ function init() {
     if (pTheme === 'dark' || pTheme === 'light') {
       state.theme = pTheme;
     }
+    const pView = urlParams.get('view');
+    if (pView === 'calendar' || pView === 'analytics' || pView === 'tasks') {
+      state.currentView = pView;
+    }
     if (urlParams.get('seed') === '1' && state.tasks.length === 0) {
       const todayIso = new Date().toISOString().slice(0, 10);
       const tomorrowIso = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -1241,16 +2728,72 @@ function init() {
       const futureIso = new Date(Date.now() + 259200000).toISOString().slice(0, 10);
 
       state.tasks = [
-        createTask({ title: 'Complete Quarterly System Architecture Review', description: 'Audit microservice boundaries, evaluate latency metrics and document ADRs.', priority: 'high', category: 'Work', dueDate: todayIso }),
-        createTask({ title: 'Prepare UX presentation for product team', description: 'Showcase redesign tokens, mobile navigation drawer, and interaction flows.', priority: 'medium', category: 'Study', dueDate: tomorrowIso }),
-        createTask({ title: 'Review tax documentation & investment portfolio', description: 'Download 1099 statements and reconcile monthly expense statements.', priority: 'high', category: 'Finance', dueDate: yesterdayIso }),
-        createTask({ title: 'Schedule annual health checkup & dental cleaning', description: 'Book appointment with Dr. Mehta for Friday afternoon.', priority: 'low', category: 'Health', dueDate: futureIso }),
-        { ...createTask({ title: 'Setup GitHub branch protection and CodeQL workflow', description: 'Enforce strict status checks on main branch.', priority: 'medium', category: 'Work' }), status: 'completed', completed: true },
-        { ...createTask({ title: 'Morning 5km endurance run', description: 'Track pace and heart rate metrics.', priority: 'low', category: 'Health' }), status: 'completed', completed: true },
+        createTask({
+          title: 'Complete Quarterly System Architecture Review',
+          description: 'Audit microservice boundaries, evaluate latency metrics and document ADRs.',
+          priority: 'high',
+          category: 'Work',
+          dueDate: todayIso,
+          tags: ['architecture', 'q4-review'],
+          subtasks: [
+            { title: 'Check microservice boundaries', completed: true },
+            { title: 'Evaluate latency metrics', completed: false },
+          ],
+        }),
+        createTask({
+          title: 'Prepare UX presentation for product team',
+          description: 'Showcase redesign tokens, mobile navigation drawer, and interaction flows.',
+          priority: 'medium',
+          category: 'Study',
+          dueDate: tomorrowIso,
+          tags: ['design', 'presentation'],
+        }),
+        createTask({
+          title: 'Review tax documentation & investment portfolio',
+          description: 'Download 1099 statements and reconcile monthly expense statements.',
+          priority: 'high',
+          category: 'Finance',
+          dueDate: yesterdayIso,
+          tags: ['taxes'],
+          recurrence: { type: 'monthly' },
+        }),
+        createTask({
+          title: 'Schedule annual health checkup & dental cleaning',
+          description: 'Book appointment with Dr. Mehta for Friday afternoon.',
+          priority: 'low',
+          category: 'Health',
+          dueDate: futureIso,
+          tags: ['health'],
+        }),
+        {
+          ...createTask({
+            title: 'Setup GitHub branch protection and CodeQL workflow',
+            description: 'Enforce strict status checks on main branch.',
+            priority: 'medium',
+            category: 'Work',
+            tags: ['devops', 'security'],
+          }),
+          status: 'completed',
+          completed: true,
+        },
+        {
+          ...createTask({
+            title: 'Morning 5km endurance run',
+            description: 'Track pace and heart rate metrics.',
+            priority: 'low',
+            category: 'Health',
+            tags: ['fitness'],
+          }),
+          status: 'completed',
+          completed: true,
+        },
       ];
       persistState();
     }
   }
+
+  // Setup Command Palette instance
+  setupCommandPalette();
 
   // Apply theme immediately
   applyTheme(state.theme);
@@ -1258,8 +2801,12 @@ function init() {
   // Bind all event handlers
   wireEvents();
 
-  // Initial render
-  render();
+  // Initial view switch and render
+  switchView(state.currentView);
+
+  // Initial Smart Reminders run and scheduled interval
+  triggerSmartRemindersCheck();
+  setInterval(triggerSmartRemindersCheck, 60000);
 
   // Expose state hook exclusively in test / debug mode
   if (urlParams && (urlParams.has('test') || urlParams.has('debug'))) {
@@ -1271,6 +2818,8 @@ function init() {
       setTimeout(() => handleOpenAddModal(), 50);
     } else if (urlParams.get('modal') === 'settings') {
       setTimeout(() => openSettings(), 50);
+    } else if (urlParams.get('modal') === 'palette') {
+      setTimeout(() => openPalette(), 50);
     }
   }
 }

@@ -172,6 +172,26 @@ export function validateTaskRecord(raw) {
   const createdAt = typeof raw.createdAt === 'string' && raw.createdAt ? raw.createdAt : new Date().toISOString();
   const updatedAt = typeof raw.updatedAt === 'string' && raw.updatedAt ? raw.updatedAt : createdAt;
 
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags.filter(t => typeof t === 'string').map(t => t.replace(/^#/, '').trim().toLowerCase().slice(0, 30)).filter(Boolean)
+    : [];
+
+  const subtasks = Array.isArray(raw.subtasks)
+    ? raw.subtasks.filter(s => s && typeof s === 'object' && typeof s.title === 'string' && s.title.trim()).map(s => ({
+        id: typeof s.id === 'string' && s.id ? s.id : (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9)),
+        title: s.title.trim().slice(0, 200),
+        completed: Boolean(s.completed),
+      }))
+    : [];
+
+  const notes = typeof raw.notes === 'string' ? raw.notes.trim().slice(0, 5000) : '';
+  const recurrence = (raw.recurrence && typeof raw.recurrence === 'object' && typeof raw.recurrence.type === 'string')
+    ? raw.recurrence
+    : null;
+  const reminderTime = (typeof raw.reminderTime === 'string' && /^(\d{1,2}):(\d{2})$/.test(raw.reminderTime.trim()))
+    ? raw.reminderTime.trim()
+    : null;
+
   return {
     id: String(raw.id),
     title,
@@ -181,6 +201,11 @@ export function validateTaskRecord(raw) {
     status,
     completed,
     dueDate,
+    tags,
+    subtasks,
+    notes,
+    recurrence,
+    reminderTime,
     createdAt,
     updatedAt,
   };

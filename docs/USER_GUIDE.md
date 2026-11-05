@@ -121,12 +121,70 @@ Switch between 5 sorting strategies via the Sort dropdown:
 
 | Key Combination | Action |
 |---|---|
+| `⌘K` / `Ctrl+K` | Open Command Palette for instant navigation and actions |
 | `/` | Instant jump & focus to search input (from anywhere outside text fields) |
 | `N` / `n` | Quick open New Task dialog (when outside text inputs) |
 | `Tab` | Advance focus to next interactive element (trapped within active dialogs) |
 | `Shift + Tab` | Move focus to previous interactive element |
 | `Enter` / `Space` | Toggle checkboxes, open modals, trigger buttons |
 | `Escape` | Dismiss active dialogs (topmost first), clear search, or close mobile drawer |
+
+---
+
+## Command Palette (⌘K / Ctrl+K)
+
+The Command Palette offers keyboard navigation and fast actions:
+- **Instant Search**: Filter through commands by typing keywords (e.g. "Calendar", "New Task", "Analytics", "Dark").
+- **Arrow Navigation**: Use `↑` and `↓` arrow keys to highlight commands.
+- **Execute**: Press `Enter` to run the selected action immediately.
+- **Escape**: Press `Esc` to close the palette anytime.
+
+---
+
+## Interactive Calendar View
+
+Switch to the **Calendar** view from the sidebar or via the Command Palette (`⌘K` → `Go to Calendar View`):
+- **Three View Modes**: Toggle between **Month**, **Week**, and **Day** view modes:
+  - **Month Grid**: 35- or 42-cell traditional calendar grid showing scheduled tasks, overflow boundary days, and color-coded priority dots.
+  - **7-Day Week View**: 7-column layout displaying scheduled tasks for every day of the active week.
+  - **Dedicated Day View**:
+    - **Header & Summary**: Full day heading (e.g. `Thursday, November 5, 2026`), today indicator, and quick metrics (`Scheduled`, `Completed`, `Pending`).
+    - **Overdue Section**: Highlights pending tasks carrying past due dates so they are easy to spot.
+    - **All-Day Tasks**: Displays tasks scheduled for the day without specific time constraints.
+    - **Hourly Timeline**: 24-hour agenda slots (emphasizing working hours 7 AM to 8 PM) mapping timed tasks with `+ Add at [Hour]` shortcuts.
+- **Navigation Controls**:
+  - Use `‹` and `›` buttons to navigate by month (in Month view), by 7 days (in Week view), or by 1 day (in Day view).
+  - Click **Today** to immediately center the calendar on the current date.
+- **Day Inspector**: When in Month or Week views, clicking any date cell opens the Day Detail panel to review all tasks scheduled for that date.
+
+---
+
+## Productivity Analytics & Trend Insights
+
+Switch to the **Analytics** view from the sidebar to inspect your productivity habits and completion metrics:
+- **KPI Summary Cards**: Live overview of Total Tasks, Completed, Pending, and Completion Rate %.
+- **Timeframe Selector**: Filter analytical metrics across **7 Days**, **30 Days**, **90 Days**, or **All Time**.
+- **Interactive SVG Trend Chart**: Visualizes daily completion numbers over time without any third-party chart libraries.
+- **Category Completion Rates**: Shows your completion percentage across each category with responsive progress meters.
+- **Priority Distribution**: Visual breakdown of tasks by priority level.
+- **Actionable Insights**: Qualitative summary cards that point out completion progress and flag overdue items.
+
+---
+
+## Subtasks, Tags, Notes & Dynamic Grouping
+
+TaskFlow allows granular task decomposition:
+- **Subtask Checklists**: Break down complex goals into actionable checklist items. Track completion progress (`X/Y`) directly on task cards.
+- **Tags & Tag Filtering**: Add comma-separated tags (e.g. `work, critical, q1`) to label tasks. Click any tag chip to filter tasks by that tag, with a quick clear tag chip in the toolbar.
+- **Rich Task Notes**: Add multiline notes to store context, links, or instructions. Expand the notes accordion on any task card to read them.
+- **Dynamic Grouping**: Use the **Group by** dropdown in the toolbar to organize your view by **Priority**, **Status**, **Category**, or **Due Date**.
+
+---
+
+## Recurring Tasks & Smart Reminders
+
+- **Recurring Tasks**: Set repeat rules (**Daily**, **Weekly**, **Monthly**, or **Yearly**) in the task creation dialog. When you complete a recurring task, TaskFlow automatically checks off the finished instance and schedules the next occurrence with duplicate prevention.
+- **Smart Reminders**: Set optional reminder times. TaskFlow monitors deadlines in the background and alerts you with native browser notifications (Notification API) and in-app toasts. Configurable in **Settings**.
 
 - **Skip Navigation**: Press `Tab` upon initial page load to reveal the "Skip to main content" link.
 - **Screen Reader Announcements**: An `aria-live="polite"` announcer reports task additions, deletions, completions, and filter transitions.

@@ -59,12 +59,22 @@ npm test
 npm run test:tasks
 npm run test:filters
 npm run test:storage
+npm run test:calendar
+npm run test:recurrence
+npm run test:analytics
+npm run test:reminders
+npm run test:palette
+npm run test:org
 
 # Watch mode for iterative development
 npm run test:watch
 ```
 
 Tests use the native **Node.js test runner** (`node:test`) and assertion module (`node:assert/strict`).
+
+### Visual QA & Screenshot Artifacts
+- `assets/screenshots/`: Historical visual verification baseline assets established in Phase 3.2.
+- `assets/screenshots/phase4/`: Dedicated Phase 4 visual regression, multi-view (Month, Week, Day), and responsive viewport screenshots generated automatically by `node scripts/qa-browser-suite.js`.
 
 ---
 

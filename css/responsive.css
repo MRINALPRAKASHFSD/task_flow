@@ -219,6 +219,35 @@
     width: 36px;
     height: 36px;
   }
+
+  /* Phase 4 Mobile Adaptive Layouts */
+  .calendar-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .calendar-day-cell {
+    min-height: 54px;
+    padding: 2px;
+  }
+
+  .calendar-day-number {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+
+  .calendar-task-pill {
+    display: none;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-dialog {
+    margin: 0 var(--space-3);
+  }
 }
 
 /* ============================================================
@@ -286,6 +315,15 @@
 
   .settings-theme-cards {
     grid-template-columns: 1fr;
+  }
+
+  .agenda-hour-row {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .agenda-hour-time {
+    padding: var(--space-1-5) var(--space-2);
+    font-size: 11px;
   }
 }
 

@@ -40,7 +40,16 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 | 🔴🟡🟢 Priority | Assign Low, Medium or High priority with colour-coded indicators. |
 | 🏷️ Categories | Organize tasks into Work, Personal, Study, Health, Finance, or General. |
 | 📅 Due dates | Set due dates with contextual badges (Today, Tomorrow, Overdue, or formatted dates). |
-| 🔍 Multi-field search | Real-time search matching title, description and category, with instant clear button. |
+| 🗓️ Calendar View | Interactive monthly, weekly and daily calendar grids with task dots and day detail inspector. |
+| 🔁 Recurring tasks | Automatic daily, weekly, monthly or yearly scheduling with duplicate prevention. |
+| 📈 Analytics & Trends | Real-time completion rates, velocity metrics, category breakdowns and SVG trend charts. |
+| ⏰ Smart Reminders | Proactive deadline tracking with Web Notification API and in-app toasts. |
+| 📋 Subtask checklists | Granular task checklists with live completion progress trackers (`0/N`). |
+| 🏷️ Tags & Filtering | Custom comma-separated tags with clickable chips and toolbar filter indicator. |
+| 📝 Task Notes | Multiline contextual notes with character limits and accordion viewer. |
+| ⚡ Command Palette | Keyboard-first search and action execution via `⌘K` / `Ctrl+K`. |
+| 🗂️ Dynamic Grouping | Group tasks by Priority, Status, Category, or Due Date. |
+| 🔍 Multi-field search | Real-time search matching title, description, category, tags and notes, with clear button. |
 | 🗂️ Views & Filters | Filter by All Tasks, Today, Upcoming, Overdue, Completed, or High Priority. |
 | ↕️ Sorting modes | Sort by Newest first, Oldest first, Priority, Due date, or Recently updated. |
 | 📊 Statistics | Dashboard showing total, pending, completed, overdue and high-priority counts. |
@@ -48,8 +57,8 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 | 💾 Versioned persistence | App state saved to LocalStorage with schema versioning and memory fallback. |
 | 🕐 Timestamps | Creation and update times shown as relative or formatted date labels. |
 | 🌙 Light / Dark themes | Follows OS preference on first visit; user override is persisted. |
-| 📱 Mobile responsive | Clean responsive layout with hamburger menu and slide-out navigation drawer. |
-| ♿ Accessible | Skip link, ARIA live announcements, keyboard navigation, focus management. |
+| 📱 Mobile responsive | Clean responsive layout with hamburger menu, bottom sheets, and multi-view navigation. |
+| ♿ Accessible | Skip link, ARIA combobox, live announcements, keyboard navigation, focus trapping. |
 | 📭 Empty states | Context-sensitive messages when no tasks match the view or search. |
 | 🔔 Toast notifications | Non-blocking feedback for every user action. |
 | 🛡️ Validation | Client-side form validation with accessible inline error messages. |
