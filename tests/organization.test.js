@@ -27,7 +27,6 @@ import {
   filterByTag,
   filterBySearch,
   groupTasks,
-  applyFilters,
 } from '../js/filters.js';
 
 describe('Advanced Task Organization — Tags', () => {
