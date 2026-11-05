@@ -68,7 +68,6 @@ import {
 import {
   completeRecurringTask,
   formatRecurrenceLabel,
-  validateRecurrenceRule,
 } from './recurrence.js';
 
 import {
