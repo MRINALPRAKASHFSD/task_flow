@@ -84,11 +84,9 @@ import {
 import {
   checkReminders,
   requestNotificationPermission,
-  getNotificationPermission,
   loadReminderPreferences,
   saveReminderPreferences,
   isDueSoon,
-  isOverdueReminder,
 } from './reminders.js';
 
 import {
