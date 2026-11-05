@@ -65,26 +65,32 @@
   --color-cat-work:             #2563eb;
   --color-cat-work-bg:          #eff6ff;
   --color-cat-work-border:      #bfdbfe;
+  --color-cat-work-text:        #1d4ed8;
 
   --color-cat-personal:         #8b5cf6;
   --color-cat-personal-bg:      #f5f3ff;
   --color-cat-personal-border:  #ddd6fe;
+  --color-cat-personal-text:    #6d28d9;
 
   --color-cat-study:            #06b6d4;
   --color-cat-study-bg:         #ecfeff;
   --color-cat-study-border:     #a5f3fc;
+  --color-cat-study-text:       #0e7490;
 
   --color-cat-health:           #10b981;
   --color-cat-health-bg:        #ecfdf5;
   --color-cat-health-border:    #a7f3d0;
+  --color-cat-health-text:      #047857;
 
   --color-cat-finance:          #f59e0b;
   --color-cat-finance-bg:       #fffbeb;
   --color-cat-finance-border:   #fde68a;
+  --color-cat-finance-text:     #92400e;
 
   --color-cat-general:          #64748b;
   --color-cat-general-bg:       #f1f5f9;
   --color-cat-general-border:   #cbd5e1;
+  --color-cat-general-text:     #475569;
 
   /* --- Canvas & Surfaces (Light) --- */
   --color-bg:                   #f8fafc;       /* Canvas base */
@@ -105,7 +111,7 @@
   /* --- Typography & Text (Light) --- */
   --color-text-primary:         #0f172a;       /* Slate 900 */
   --color-text-secondary:       #475569;       /* Slate 600 */
-  --color-text-muted:           #94a3b8;       /* Slate 400 */
+  --color-text-muted:           #64748b;       /* Slate 500 — WCAG AA compliant 4.76:1 */
   --color-text-tertiary:        #64748b;       /* Slate 500 */
   --color-text-on-primary:      #ffffff;
   --color-text-on-accent:       #ffffff;
@@ -277,26 +283,32 @@
   --color-cat-work:             #60a5fa;
   --color-cat-work-bg:          rgba(37, 99, 235, 0.14);
   --color-cat-work-border:      rgba(59, 130, 246, 0.3);
+  --color-cat-work-text:        #93c5fd;
 
   --color-cat-personal:         #a78bfa;
   --color-cat-personal-bg:      rgba(139, 92, 246, 0.14);
   --color-cat-personal-border:  rgba(167, 139, 250, 0.3);
+  --color-cat-personal-text:    #c4b5fd;
 
   --color-cat-study:            #22d3ee;
   --color-cat-study-bg:         rgba(6, 182, 212, 0.14);
   --color-cat-study-border:     rgba(34, 211, 238, 0.3);
+  --color-cat-study-text:       #67e8f9;
 
   --color-cat-health:           #34d399;
   --color-cat-health-bg:        rgba(16, 185, 129, 0.14);
   --color-cat-health-border:    rgba(52, 211, 153, 0.3);
+  --color-cat-health-text:      #6ee7b7;
 
   --color-cat-finance:          #fbbf24;
   --color-cat-finance-bg:       rgba(245, 158, 11, 0.14);
   --color-cat-finance-border:   rgba(251, 191, 36, 0.3);
+  --color-cat-finance-text:     #fde68a;
 
   --color-cat-general:          #94a3b8;
   --color-cat-general-bg:       rgba(100, 116, 139, 0.14);
   --color-cat-general-border:   rgba(148, 163, 184, 0.3);
+  --color-cat-general-text:     #cbd5e1;
 
   /* --- Elevation & Shadows (Dark) --- */
   --shadow-xs:    0 1px 2px 0 rgba(0, 0, 0, 0.5);

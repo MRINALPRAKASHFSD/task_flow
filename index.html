@@ -534,7 +534,7 @@
                 spellcheck="false"
                 aria-label="Search tasks"
               />
-              <kbd class="search-kbd" aria-hidden="true">/</kbd>
+              <kbd class="search-box__kbd search-kbd" id="search-kbd" aria-hidden="true">/</kbd>
               <button
                 id="search-clear"
                 type="button"
@@ -914,20 +914,21 @@
               <span>Export Tasks (JSON)</span>
             </button>
 
-            <label for="import-file-input" class="btn btn-secondary btn-sm file-upload-label">
+            <label for="import-file-input" class="btn btn-secondary btn-sm file-upload-label" tabindex="0">
               <svg class="tf-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
               <span>Import Tasks (JSON)</span>
+              <input
+                id="import-file-input"
+                type="file"
+                accept=".json,application/json"
+                class="sr-only"
+                tabindex="-1"
+              />
             </label>
-            <input
-              id="import-file-input"
-              type="file"
-              accept=".json,application/json"
-              class="sr-only"
-            />
           </div>
         </div>
 
