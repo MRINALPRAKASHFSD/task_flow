@@ -864,10 +864,7 @@ async function main() {
     report.performanceMetrics = perfData;
     report.consoleAudit = { errors, warnings };
 
-    // Save final report to disk
-    const reportPath = path.join(ROOT_DIR, 'assets', 'qa-browser-report.json');
-    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
-    console.log(`\n✅ Saved comprehensive QA report to assets/qa-browser-report.json`);
+    console.log(`\n✅ QA browser audit verification completed successfully.`);
 
     console.log('\n========================================================================');
     console.log('  ALL AUDITS AND BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY');
