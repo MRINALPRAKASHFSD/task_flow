@@ -1,0 +1,81 @@
+# GitHub Actions — Production Deployment to GitHub Pages
+# Deploys TaskFlow static application to GitHub Pages upon push to main.
+#
+# Copyright (c) 2026 Mrinal Prakash
+# SPDX-License-Identifier: MIT
+#
+# Action version pins:
+#   actions/checkout              v4 → SHA pinned below
+#   actions/setup-node            v4 → SHA pinned below
+#   actions/configure-pages       v5 → SHA pinned below
+#   actions/upload-pages-artifact v3 → SHA pinned below
+#   actions/deploy-pages          v4 → SHA pinned below
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Minimum required permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping queued runs between in-progress and latest.
+# Preserves in-progress deployments from cancellation.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build and verification job
+  build:
+    name: Build & Verify
+    # Ensure deployment workflow only runs against the main branch
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.2.2 — 2024-10-28
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up Node.js
+        # actions/setup-node v4.1.0 — 2024-11-04
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: "20"
+
+      - name: Run quality checks
+        run: npm run check
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Configure GitHub Pages
+        # actions/configure-pages v5.0.0
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+
+      - name: Upload Pages artifact
+        # actions/upload-pages-artifact v3.0.1
+        uses: actions/upload-pages-artifact@5f327015a708106f6f1b7c9a633901af30fe80cb
+        with:
+          path: "."
+
+  # Deployment job
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        # actions/deploy-pages v4.0.5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
+

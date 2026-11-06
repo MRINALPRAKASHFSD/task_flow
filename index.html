@@ -926,207 +926,249 @@
       <div class="modal__body">
         <form id="task-form" novalidate>
 
-          <!-- Title -->
-          <div class="form-group">
-            <div class="form-label-row">
-              <label for="field-title" class="form-label form-label--required">
-                Task Title
-              </label>
-              <span class="form-counter" id="title-counter">0 / 200</span>
-            </div>
-            <input
-              id="field-title"
-              type="text"
-              class="form-input"
-              placeholder="What needs to be done?"
-              maxlength="200"
-              required
-              autocomplete="off"
-              aria-describedby="error-title"
-              aria-required="true"
-              aria-invalid="false"
-            />
-            <span id="error-title" class="form-error" role="alert" aria-live="assertive"></span>
-          </div>
+          <div class="form-sections-wrapper">
 
-          <!-- Description -->
-          <div class="form-group">
-            <div class="form-label-row">
-              <label for="field-description" class="form-label">
-                Description <span class="text-muted text-sm">(optional)</span>
-              </label>
-              <span class="form-counter" id="desc-counter">0 / 1000</span>
-            </div>
-            <textarea
-              id="field-description"
-              class="form-textarea"
-              placeholder="Add more details, context, notes or checklist items…"
-              maxlength="1000"
-              rows="3"
-              aria-describedby="error-description"
-              aria-invalid="false"
-            ></textarea>
-            <span id="error-description" class="form-error" role="alert" aria-live="assertive"></span>
-          </div>
+            <!-- ============================================
+                 SECTION A — Task Details
+                 ============================================ -->
+            <fieldset class="form-section form-section--details">
+              <legend class="form-section__header">
+                <span class="form-section__title">Task Details</span>
+              </legend>
 
-          <!-- Priority and Category Row -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="field-priority" class="form-label">
-                Priority
-              </label>
-              <div class="select-wrapper">
-                <select id="field-priority" class="form-select" aria-label="Select task priority">
-                  <option value="low">Low Priority</option>
-                  <option value="medium" selected>Medium Priority</option>
-                  <option value="high">High Priority</option>
-                </select>
-                <span class="select-chevron" aria-hidden="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </span>
+              <!-- Title (Full Width) -->
+              <div class="form-group form-col-full">
+                <div class="form-label-row">
+                  <label for="field-title" class="form-label form-label--required">
+                    Task Title
+                  </label>
+                  <span class="form-counter" id="title-counter">0 / 200</span>
+                </div>
+                <input
+                  id="field-title"
+                  type="text"
+                  class="form-input"
+                  placeholder="What needs to be done?"
+                  maxlength="200"
+                  required
+                  autocomplete="off"
+                  aria-describedby="error-title"
+                  aria-required="true"
+                  aria-invalid="false"
+                />
+                <span id="error-title" class="form-error" role="alert" aria-live="assertive"></span>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="field-category" class="form-label">
-                Category
-              </label>
-              <div class="select-wrapper">
-                <select id="field-category" class="form-select" aria-label="Select task category">
-                  <option value="Work">Work</option>
-                  <option value="Personal">Personal</option>
-                  <option value="Study">Study</option>
-                  <option value="Health">Health</option>
-                  <option value="Finance">Finance</option>
-                  <option value="General" selected>General</option>
-                </select>
-                <span class="select-chevron" aria-hidden="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </span>
+              <!-- Description (Full Width) -->
+              <div class="form-group form-col-full">
+                <div class="form-label-row">
+                  <label for="field-description" class="form-label">
+                    Description <span class="text-muted text-sm">(optional)</span>
+                  </label>
+                  <span class="form-counter" id="desc-counter">0 / 1000</span>
+                </div>
+                <textarea
+                  id="field-description"
+                  class="form-textarea"
+                  placeholder="Add more details, context, notes or checklist items…"
+                  maxlength="1000"
+                  rows="2"
+                  aria-describedby="error-description"
+                  aria-invalid="false"
+                ></textarea>
+                <span id="error-description" class="form-error" role="alert" aria-live="assertive"></span>
               </div>
-            </div>
-          </div>
+            </fieldset>
 
-          <!-- Due Date Row -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="field-due-date" class="form-label">
-                Due Date <span class="text-muted text-sm">(optional)</span>
-              </label>
-              <input
-                id="field-due-date"
-                type="date"
-                class="form-input form-date-input"
-                aria-describedby="error-due-date"
-                aria-invalid="false"
-              />
-              <span id="error-due-date" class="form-error" role="alert" aria-live="assertive"></span>
-            </div>
+            <!-- ============================================
+                 SECTION B — Task Configuration
+                 ============================================ -->
+            <fieldset class="form-section form-section--config">
+              <legend class="form-section__header">
+                <span class="form-section__title">Task Configuration</span>
+              </legend>
 
-            <div class="form-group">
-              <label for="field-reminder-time" class="form-label">
-                Reminder Time <span class="text-muted text-sm">(optional)</span>
-              </label>
-              <input
-                id="field-reminder-time"
-                type="time"
-                class="form-input"
-                aria-label="Reminder Time"
-              />
-            </div>
-          </div>
+              <div class="form-grid-2col">
+                <!-- Priority: Left Column -->
+                <div class="form-group form-col-left">
+                  <label for="field-priority" class="form-label">
+                    Priority
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="field-priority" class="form-select" aria-label="Select task priority">
+                      <option value="low">Low Priority</option>
+                      <option value="medium" selected>Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+                    <span class="select-chevron" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
 
-          <!-- Recurrence -->
-          <div class="form-group">
-            <label for="field-recurrence" class="form-label">
-              Repeat (Recurring Task)
-            </label>
-            <div class="select-wrapper">
-              <select id="field-recurrence" class="form-select" aria-label="Select recurrence rule">
-                <option value="none">Does not repeat</option>
-                <option value="daily">Every day</option>
-                <option value="weekdays">Every weekday (Mon–Fri)</option>
-                <option value="weekly">Every week</option>
-                <option value="monthly">Every month</option>
-                <option value="yearly">Every year</option>
-                <option value="custom">Custom interval…</option>
-              </select>
-              <span class="select-chevron" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </span>
-            </div>
-            <div id="recurrence-custom-wrapper" class="form-group" style="margin-top: 0.5rem;" hidden>
-              <label for="field-recurrence-interval" class="form-label text-xs">
-                Repeat interval (every N days)
-              </label>
-              <input
-                id="field-recurrence-interval"
-                type="number"
-                min="1"
-                max="365"
-                value="1"
-                class="form-input form-input--sm"
-                aria-label="Custom repeat interval in days"
-              />
-            </div>
-          </div>
+                <!-- Category: Right Column -->
+                <div class="form-group form-col-right">
+                  <label for="field-category" class="form-label">
+                    Category
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="field-category" class="form-select" aria-label="Select task category">
+                      <option value="Work">Work</option>
+                      <option value="Personal">Personal</option>
+                      <option value="Study">Study</option>
+                      <option value="Health">Health</option>
+                      <option value="Finance">Finance</option>
+                      <option value="General" selected>General</option>
+                    </select>
+                    <span class="select-chevron" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
 
-          <!-- Tags -->
-          <div class="form-group">
-            <label for="field-tags" class="form-label">
-              Tags <span class="text-muted text-sm">(comma-separated, max 20)</span>
-            </label>
-            <input
-              id="field-tags"
-              type="text"
-              class="form-input"
-              placeholder="e.g. work, urgent, sprint-1"
-              autocomplete="off"
-            />
-          </div>
+                <!-- Due Date: Left Column -->
+                <div class="form-group form-col-left">
+                  <label for="field-due-date" class="form-label">
+                    Due Date <span class="text-muted text-sm">(optional)</span>
+                  </label>
+                  <input
+                    id="field-due-date"
+                    type="date"
+                    class="form-input form-date-input"
+                    aria-describedby="error-due-date"
+                    aria-invalid="false"
+                  />
+                  <span id="error-due-date" class="form-error" role="alert" aria-live="assertive"></span>
+                </div>
 
-          <!-- Subtasks -->
-          <div class="form-group">
-            <label class="form-label">
-              Subtasks
-            </label>
-            <div id="subtasks-editor-list" class="subtasks-editor-list"></div>
-            <div class="subtask-add-row">
-              <input
-                id="field-new-subtask"
-                type="text"
-                class="form-input"
-                placeholder="Add a step or subtask…"
-                maxlength="200"
-              />
-              <button id="btn-add-subtask" type="button" class="btn btn-secondary btn-sm">Add</button>
-            </div>
-          </div>
+                <!-- Reminder Time: Right Column -->
+                <div class="form-group form-col-right">
+                  <label for="field-reminder-time" class="form-label">
+                    Reminder Time <span class="text-muted text-sm">(optional)</span>
+                  </label>
+                  <input
+                    id="field-reminder-time"
+                    type="time"
+                    class="form-input"
+                    aria-label="Reminder Time"
+                  />
+                </div>
 
-          <!-- Notes -->
-          <div class="form-group">
-            <div class="form-label-row">
-              <label for="field-notes" class="form-label">
-                Notes & Reference <span class="text-muted text-sm">(optional)</span>
-              </label>
-              <span class="form-counter" id="notes-counter">0 / 5000</span>
-            </div>
-            <textarea
-              id="field-notes"
-              class="form-textarea"
-              rows="3"
-              maxlength="5000"
-              placeholder="Additional notes, markdown details, or links…"
-            ></textarea>
-          </div>
+                <!-- Repeat / Recurring Task: Full Width -->
+                <div class="form-group form-col-span-2">
+                  <label for="field-recurrence" class="form-label">
+                    Repeat (Recurring Task)
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="field-recurrence" class="form-select" aria-label="Select recurrence rule">
+                      <option value="none">Does not repeat</option>
+                      <option value="daily">Every day</option>
+                      <option value="weekdays">Every weekday (Mon–Fri)</option>
+                      <option value="weekly">Every week</option>
+                      <option value="monthly">Every month</option>
+                      <option value="yearly">Every year</option>
+                      <option value="custom">Custom interval…</option>
+                    </select>
+                    <span class="select-chevron" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                  <div id="recurrence-custom-wrapper" class="recurrence-custom-wrapper" style="margin-top: 0.5rem;" hidden>
+                    <label for="field-recurrence-interval" class="form-label text-xs">
+                      Repeat interval (every N days)
+                    </label>
+                    <input
+                      id="field-recurrence-interval"
+                      type="number"
+                      min="1"
+                      max="365"
+                      value="1"
+                      class="form-input form-input--sm"
+                      aria-label="Custom repeat interval in days"
+                    />
+                  </div>
+                </div>
+              </div>
+            </fieldset>
 
-          <!-- Actions -->
+            <!-- ============================================
+                 SECTION C — Organization
+                 ============================================ -->
+            <fieldset class="form-section form-section--org">
+              <legend class="form-section__header">
+                <span class="form-section__title">Organization</span>
+              </legend>
+
+              <!-- Tags: Full Width -->
+              <div class="form-group form-col-full">
+                <label for="field-tags" class="form-label">
+                  Tags <span class="text-muted text-sm">(comma-separated, max 20)</span>
+                </label>
+                <input
+                  id="field-tags"
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g. work, urgent, sprint-1"
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- Subtasks: Full Width -->
+              <div class="form-group form-col-full">
+                <label class="form-label">
+                  Subtasks
+                </label>
+                <div id="subtasks-editor-list" class="subtasks-editor-list"></div>
+                <div class="subtask-add-row">
+                  <input
+                    id="field-new-subtask"
+                    type="text"
+                    class="form-input"
+                    placeholder="Add a step or subtask…"
+                    maxlength="200"
+                  />
+                  <button id="btn-add-subtask" type="button" class="btn btn-secondary btn-sm">Add</button>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- ============================================
+                 SECTION D — Additional Information
+                 ============================================ -->
+            <fieldset class="form-section form-section--notes">
+              <legend class="form-section__header">
+                <span class="form-section__title">Additional Information</span>
+              </legend>
+
+              <!-- Notes & Reference: Full Width -->
+              <div class="form-group form-col-full">
+                <div class="form-label-row">
+                  <label for="field-notes" class="form-label">
+                    Notes & Reference <span class="text-muted text-sm">(optional)</span>
+                  </label>
+                  <span class="form-counter" id="notes-counter">0 / 5000</span>
+                </div>
+                <textarea
+                  id="field-notes"
+                  class="form-textarea"
+                  rows="2"
+                  maxlength="5000"
+                  placeholder="Additional notes, markdown details, or links…"
+                ></textarea>
+              </div>
+            </fieldset>
+
+          </div><!-- /.form-sections-wrapper -->
+
+          <!-- ============================================
+               SECTION E — Actions
+               ============================================ -->
           <div class="form-actions">
             <button id="btn-cancel" type="button" class="btn btn-secondary">Cancel</button>
             <button id="btn-submit" type="submit" class="btn btn-primary">Save Task</button>

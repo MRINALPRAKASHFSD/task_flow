@@ -203,6 +203,21 @@ export function createToastInfoIcon(size = 18, className = '') {
   return svg;
 }
 
+export function createToastWarningIcon(size = 18, className = '') {
+  const svg = createSvg(size, size, '0 0 24 24', className);
+  appendPath(svg, 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z');
+  appendLine(svg, 12, 9, 12, 13);
+  appendLine(svg, 12, 17, 12.01, 17);
+  return svg;
+}
+
+export function createToastCloseIcon(size = 14, className = '') {
+  const svg = createSvg(size, size, '0 0 24 24', className);
+  appendLine(svg, 18, 6, 6, 18);
+  appendLine(svg, 6, 6, 18, 18);
+  return svg;
+}
+
 export function createEmptyClipboardIcon(size = 48, className = '') {
   const svg = createSvg(size, size, '0 0 24 24', className);
   appendPath(svg, 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2');

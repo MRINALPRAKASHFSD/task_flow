@@ -170,6 +170,86 @@ const SCREENSHOT_TARGETS = [
     mobile: false,
     waitFor: () => 'document.getElementById("settings-overlay")?.classList.contains("is-open")',
   },
+  {
+    name: 'phase4/dashboard-clean.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
+  },
+  {
+    name: 'phase4/dashboard-toast.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light&toast=1`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".toast").length >= 1',
+  },
+  {
+    name: 'phase4/modal-task-desktop.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light&modal=add`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.getElementById("modal-overlay")?.classList.contains("is-open")',
+  },
+  {
+    name: 'phase4/modal-task-mobile.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light&modal=add`,
+    width: 375,
+    height: 812,
+    mobile: true,
+    waitFor: () => 'document.getElementById("modal-overlay")?.classList.contains("is-open")',
+  },
+  {
+    name: 'phase4/modal-task-light.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light&modal=add`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.getElementById("modal-overlay")?.classList.contains("is-open")',
+  },
+  {
+    name: 'phase4/modal-settings-dark.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark&modal=settings`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.getElementById("settings-overlay")?.classList.contains("is-open")',
+  },
+  {
+    name: 'phase4/viewport-1440x900-light.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
+  },
+  {
+    name: 'phase4/viewport-1440x900-dark.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark`,
+    width: 1440,
+    height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
+  },
+  {
+    name: 'phase4/viewport-375x812-light.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light`,
+    width: 375,
+    height: 812,
+    mobile: true,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
+  },
+  {
+    name: 'phase4/viewport-375x812-dark.png',
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark`,
+    width: 375,
+    height: 812,
+    mobile: true,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
+  },
 ];
 
 async function main() {
@@ -267,6 +347,7 @@ async function main() {
       });
 
       const buffer = Buffer.from(shot.data, 'base64');
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
       fs.writeFileSync(outputPath, buffer);
       console.log(`✅ Saved ${target.name} (${(buffer.length / 1024).toFixed(1)} KB)`);
     }
