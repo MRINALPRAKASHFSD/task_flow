@@ -94,6 +94,12 @@ import {
 } from './palette.js';
 
 import {
+  ToastManager,
+  TOAST_LIMIT,
+  TOAST_DURATIONS,
+} from './notifications.js';
+
+import {
   debounce,
   setText,
   formatDate,
@@ -581,7 +587,7 @@ function toggleTheme() {
   applyTheme(state.theme);
   saveTheme(state.theme);
   persistState();
-  showToast(state.theme === 'dark' ? 'Dark theme enabled.' : 'Light theme enabled.', 'info', 2000);
+  showToast(state.theme === 'dark' ? 'Dark theme enabled.' : 'Light theme enabled.', 'info');
 }
 
 // ─── Mobile Sidebar Navigation ────────────────────────────────────────────────
@@ -600,46 +606,18 @@ function closeMobileNav() {
 
 // ─── Toast Notifications ──────────────────────────────────────────────────────
 
+const toastManager = new ToastManager(null);
+
 /**
- * Display a non-blocking toast notification.
+ * Display a managed, non-blocking toast notification.
  *
  * @param {string} message
  * @param {'success'|'error'|'info'} [type='info']
- * @param {number} [durationMs=3200]
+ * @param {number|null} [durationMs=null]
+ * @returns {HTMLElement|null}
  */
-function showToast(message, type = 'info', durationMs = 3200) {
-  if (!dom.toastContainer) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast toast--${type}`;
-  toast.setAttribute('role', 'status');
-  toast.setAttribute('aria-live', 'polite');
-
-  const iconSpan = document.createElement('span');
-  iconSpan.className = 'toast__icon';
-  iconSpan.setAttribute('aria-hidden', 'true');
-
-  let iconSvg = null;
-  if (type === 'success') {
-    iconSvg = createToastSuccessIcon(18);
-  } else if (type === 'error') {
-    iconSvg = createToastErrorIcon(18);
-  } else {
-    iconSvg = createToastInfoIcon(18);
-  }
-  if (iconSvg) iconSpan.appendChild(iconSvg);
-
-  const msgSpan = document.createElement('span');
-  msgSpan.textContent = message;
-
-  toast.appendChild(iconSpan);
-  toast.appendChild(msgSpan);
-  dom.toastContainer.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('is-removing');
-    toast.addEventListener('animationend', () => toast.remove(), { once: true });
-  }, durationMs);
+export function showToast(message, type = 'info', durationMs = null) {
+  return toastManager.show(message, type, durationMs);
 }
 
 // ─── State Persistence ────────────────────────────────────────────────────────
@@ -1097,7 +1075,7 @@ function handleToggleStatus(taskId) {
     const msg = (toggled.status === 'completed' || toggled.completed)
       ? 'Task marked as completed.'
       : 'Task reopened.';
-    showToast(msg, 'success', 2200);
+    showToast(msg, 'success');
   }
 
   persistState();
@@ -1126,7 +1104,7 @@ async function handleDeleteTask(taskId) {
   } else {
     render();
   }
-  showToast('Task deleted.', 'info', 2500);
+  showToast('Task deleted.', 'info');
 }
 
 function handleEditTask(taskId) {
@@ -2795,6 +2773,9 @@ function init() {
   // Setup Command Palette instance
   setupCommandPalette();
 
+  // Connect Toast notification manager container
+  toastManager.setContainer(dom.toastContainer);
+
   // Apply theme immediately
   applyTheme(state.theme);
 
@@ -2808,9 +2789,10 @@ function init() {
   triggerSmartRemindersCheck();
   setInterval(triggerSmartRemindersCheck, 60000);
 
-  // Expose state hook exclusively in test / debug mode
+  // Expose state and toast hooks exclusively in test / debug mode
   if (urlParams && (urlParams.has('test') || urlParams.has('debug'))) {
     window.__taskflow_state = state;
+    window.__taskflow_toasts = toastManager;
   }
 
   if (urlParams) {
@@ -2820,6 +2802,11 @@ function init() {
       setTimeout(() => openSettings(), 50);
     } else if (urlParams.get('modal') === 'palette') {
       setTimeout(() => openPalette(), 50);
+    }
+    if (urlParams.get('toast') === '1') {
+      setTimeout(() => {
+        toastManager.show('Task completed! Next recurrence scheduled for tomorrow.', 'success');
+      }, 100);
     }
   }
 }

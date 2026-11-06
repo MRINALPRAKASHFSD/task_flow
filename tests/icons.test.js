@@ -29,6 +29,8 @@ import {
   createToastSuccessIcon,
   createToastErrorIcon,
   createToastInfoIcon,
+  createToastWarningIcon,
+  createToastCloseIcon,
   createEmptyClipboardIcon,
   createPriorityDot,
 } from '../js/icons.js';
@@ -117,6 +119,8 @@ describe('SVG Icon Factory', () => {
       createToastSuccessIcon,
       createToastErrorIcon,
       createToastInfoIcon,
+      createToastWarningIcon,
+      createToastCloseIcon,
       createEmptyClipboardIcon,
     ];
 

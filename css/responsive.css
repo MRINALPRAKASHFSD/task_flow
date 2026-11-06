@@ -172,9 +172,21 @@
     min-width: 100%;
   }
 
-  .form-row {
+  .form-row,
+  .form-grid-2col {
     grid-template-columns: 1fr;
     gap: var(--space-3);
+  }
+
+  .form-col-left,
+  .form-col-right,
+  .form-col-span-2 {
+    grid-column: 1;
+  }
+
+  #modal-overlay .form-actions {
+    margin: var(--space-3) calc(var(--space-4) * -1) calc(var(--space-4) * -1);
+    padding: var(--space-3) var(--space-4);
   }
 
   /* Bottom sheet modal presentation on mobile */
