@@ -33,36 +33,36 @@ It runs entirely in the browser, persists data in LocalStorage, and requires no 
 
 | Feature | Description |
 |---------|-------------|
-| ✅ Create tasks | Add tasks with title, description, priority, category and due date. |
-| ✏️ Edit tasks | Update any task in place via the accessible edit modal. |
-| 🗑️ Delete tasks | Remove tasks with an accessible confirmation prompt. |
-| ☑️ Toggle status | Mark tasks as completed or reopen them with a single click. |
-| 🔴🟡🟢 Priority | Assign Low, Medium or High priority with colour-coded indicators. |
-| 🏷️ Categories | Organize tasks into Work, Personal, Study, Health, Finance, or General. |
-| 📅 Due dates | Set due dates with contextual badges (Today, Tomorrow, Overdue, or formatted dates). |
-| 🗓️ Calendar View | Interactive monthly, weekly and daily calendar grids with task dots and day detail inspector. |
-| 🔁 Recurring tasks | Automatic daily, weekly, monthly or yearly scheduling with duplicate prevention. |
-| 📈 Analytics & Trends | Real-time completion rates, velocity metrics, category breakdowns and SVG trend charts. |
-| ⏰ Smart Reminders | Proactive deadline tracking with Web Notification API and in-app toasts. |
-| 📋 Subtask checklists | Granular task checklists with live completion progress trackers (`0/N`). |
-| 🏷️ Tags & Filtering | Custom comma-separated tags with clickable chips and toolbar filter indicator. |
-| 📝 Task Notes | Multiline contextual notes with character limits and accordion viewer. |
-| ⚡ Command Palette | Keyboard-first search and action execution via `⌘K` / `Ctrl+K`. |
-| 🗂️ Dynamic Grouping | Group tasks by Priority, Status, Category, or Due Date. |
-| 🔍 Multi-field search | Real-time search matching title, description, category, tags and notes, with clear button. |
-| 🗂️ Views & Filters | Filter by All Tasks, Today, Upcoming, Overdue, Completed, or High Priority. |
-| ↕️ Sorting modes | Sort by Newest first, Oldest first, Priority, Due date, or Recently updated. |
-| 📊 Statistics | Dashboard showing total, pending, completed, overdue and high-priority counts. |
-| 📈 Progress bar | Real-time completion percentage visualised with a progress bar. |
-| 💾 Versioned persistence | App state saved to LocalStorage with schema versioning and memory fallback. |
-| 🕐 Timestamps | Creation and update times shown as relative or formatted date labels. |
-| 🌙 Light / Dark themes | Follows OS preference on first visit; user override is persisted. |
-| 📱 Mobile responsive | Clean responsive layout with hamburger menu, bottom sheets, and multi-view navigation. |
-| ♿ Accessible | Skip link, ARIA combobox, live announcements, keyboard navigation, focus trapping. |
-| 📭 Empty states | Context-sensitive messages when no tasks match the view or search. |
-| 🔔 Toast notifications | Non-blocking feedback for every user action. |
-| 🛡️ Validation | Client-side form validation with accessible inline error messages. |
-| 📦 Backup & Restore | Export and import task data as JSON files directly from Settings. |
+| <img src="assets/readme-icons/plus-square.svg" width="16" height="16" alt="Create Tasks" valign="middle" /> Create Tasks | Add tasks with title, description, priority level, category, and optional due date. |
+| <img src="assets/readme-icons/pencil.svg" width="16" height="16" alt="Edit Tasks" valign="middle" /> Edit Tasks | Modify existing tasks in place through the accessible task editor dialog. |
+| <img src="assets/readme-icons/trash-2.svg" width="16" height="16" alt="Delete Tasks" valign="middle" /> Delete Tasks | Remove tasks with an accessible modal confirmation dialog. |
+| <img src="assets/readme-icons/circle-check.svg" width="16" height="16" alt="Toggle Status" valign="middle" /> Toggle Status | Mark tasks as completed or reopen them with a single click or keyboard shortcut. |
+| <img src="assets/readme-icons/flag.svg" width="16" height="16" alt="Priority" valign="middle" /> Priority | Assign Low, Medium, or High priority levels with visual indicators. |
+| <img src="assets/readme-icons/folder.svg" width="16" height="16" alt="Categories" valign="middle" /> Categories | Organize tasks into Work, Personal, Study, Health, Finance, or General. |
+| <img src="assets/readme-icons/calendar-days.svg" width="16" height="16" alt="Due Dates" valign="middle" /> Due Dates | Set target dates with contextual status badges (Today, Tomorrow, Overdue, or formatted dates). |
+| <img src="assets/readme-icons/calendar-range.svg" width="16" height="16" alt="Calendar View" valign="middle" /> Calendar View | Interactive Month, Week, and Day calendar grids with task indicators and date inspector. |
+| <img src="assets/readme-icons/repeat.svg" width="16" height="16" alt="Recurring Tasks" valign="middle" /> Recurring Tasks | Schedule recurring tasks with daily, weekly, monthly, or yearly cadence and duplicate prevention. |
+| <img src="assets/readme-icons/chart-no-axes-combined.svg" width="16" height="16" alt="Analytics & Trends" valign="middle" /> Analytics & Trends | Real-time completion rates, velocity metrics, category breakdowns, and SVG trend charts. |
+| <img src="assets/readme-icons/bell-ring.svg" width="16" height="16" alt="Smart Reminders" valign="middle" /> Smart Reminders | Proactive deadline tracking with the Web Notification API and in-app toasts. |
+| <img src="assets/readme-icons/list-checks.svg" width="16" height="16" alt="Subtask Checklists" valign="middle" /> Subtask Checklists | Granular task checklists with live completion progress tracking (`0/N`). |
+| <img src="assets/readme-icons/tags.svg" width="16" height="16" alt="Tags & Filtering" valign="middle" /> Tags & Filtering | Custom comma-separated tags with filterable chips and active filter indicators. |
+| <img src="assets/readme-icons/notebook-pen.svg" width="16" height="16" alt="Task Notes" valign="middle" /> Task Notes | Multiline contextual notes with character limits and expandable accordion view. |
+| <img src="assets/readme-icons/command.svg" width="16" height="16" alt="Command Palette" valign="middle" /> Command Palette | Keyboard-driven search and action execution via `⌘K` / `Ctrl+K`. |
+| <img src="assets/readme-icons/layers-3.svg" width="16" height="16" alt="Dynamic Grouping" valign="middle" /> Dynamic Grouping | Group task lists by Priority, Status, Category, or Due Date. |
+| <img src="assets/readme-icons/search.svg" width="16" height="16" alt="Multi-field Search" valign="middle" /> Multi-field Search | Real-time search across title, description, category, tags, and notes with clear button. |
+| <img src="assets/readme-icons/list-filter.svg" width="16" height="16" alt="Views & Filters" valign="middle" /> Views & Filters | Filter by All Tasks, Today, Upcoming, Overdue, Completed, or High Priority. |
+| <img src="assets/readme-icons/arrow-up-down.svg" width="16" height="16" alt="Sorting Modes" valign="middle" /> Sorting Modes | Order tasks by Newest first, Oldest first, Priority, Due Date, or Recently Updated. |
+| <img src="assets/readme-icons/chart-column.svg" width="16" height="16" alt="Statistics" valign="middle" /> Statistics | Dashboard showing total, pending, completed, overdue, and high-priority counts. |
+| <img src="assets/readme-icons/chart-no-axes-gantt.svg" width="16" height="16" alt="Progress Bar" valign="middle" /> Progress Bar | Real-time completion percentage visualised with a progress bar. |
+| <img src="assets/readme-icons/database.svg" width="16" height="16" alt="Versioned Persistence" valign="middle" /> Versioned Persistence | Application state saved to LocalStorage with schema versioning and memory fallback. |
+| <img src="assets/readme-icons/clock.svg" width="16" height="16" alt="Timestamps" valign="middle" /> Timestamps | Creation and update timestamps displayed as relative or formatted date labels. |
+| <img src="assets/readme-icons/sun-moon.svg" width="16" height="16" alt="Light / Dark Themes" valign="middle" /> Light / Dark Themes | Follows system OS preference on first visit; manual user preference is persisted. |
+| <img src="assets/readme-icons/smartphone.svg" width="16" height="16" alt="Mobile Responsive" valign="middle" /> Mobile Responsive | Responsive layout with mobile navigation drawer, bottom sheets, and multi-view navigation. |
+| <img src="assets/readme-icons/accessibility.svg" width="16" height="16" alt="Accessible" valign="middle" /> Accessible | Skip link, ARIA combobox, live announcements, full keyboard navigation, and focus trapping. |
+| <img src="assets/readme-icons/inbox.svg" width="16" height="16" alt="Empty States" valign="middle" /> Empty States | Context-sensitive messages when no tasks match the selected view or search query. |
+| <img src="assets/readme-icons/message-square.svg" width="16" height="16" alt="Toast Notifications" valign="middle" /> Toast Notifications | Non-blocking feedback for every user action with 5-second auto-dismissal and queue. |
+| <img src="assets/readme-icons/shield-check.svg" width="16" height="16" alt="Validation" valign="middle" /> Validation | Client-side form validation with accessible inline error messages and live announcements. |
+| <img src="assets/readme-icons/file-json.svg" width="16" height="16" alt="Backup & Restore" valign="middle" /> Backup & Restore | Export and import task data as JSON files directly from the Settings dialog. |
 
 ---
 
@@ -121,7 +121,7 @@ Node.js ≥ 20 is required only for running the dev server and tests.
 
 ### Editing a task
 
-- Hover over a task card and click the **✏️** (edit) button.
+- Hover over a task card and click the **Edit** button.
 - Modify the fields in the modal and click **Save Task**.
 
 ### Completing a task
@@ -131,7 +131,7 @@ Node.js ≥ 20 is required only for running the dev server and tests.
 
 ### Deleting a task
 
-- Hover over a task card and click the **🗑️** (delete) button.
+- Hover over a task card and click the **Delete** button.
 - Confirm the deletion in the dialog.
 
 ### Filtering and searching
@@ -141,7 +141,7 @@ Node.js ≥ 20 is required only for running the dev server and tests.
 
 ### Switching themes
 
-- Click the **🌙 / ☀️** button in the header to toggle between light and dark themes.
+- Click the **Theme Toggle** button in the header (or press `T`) to switch between light and dark themes.
 - Your preference is saved automatically.
 
 ---
@@ -288,4 +288,4 @@ repository with all files but a clean, unrelated Git history.
 
 ---
 
-*Made with ❤️ — Plan smarter. Stay organized. Get things done.*
+*Plan smarter. Stay organized. Get things done.*
