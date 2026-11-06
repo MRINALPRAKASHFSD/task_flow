@@ -21,6 +21,7 @@ html {
   font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  background-color: var(--color-bg);
 }
 
 body {
@@ -122,6 +123,7 @@ a:hover {
    ============================================================ */
 .app-layout {
   display: grid;
+  background-color: var(--color-bg);
   grid-template-areas:
     "header header"
     "sidebar main";
@@ -395,6 +397,7 @@ a:hover {
    ============================================================ */
 .app-main {
   grid-area: main;
+  background-color: var(--color-bg);
   padding: var(--space-8);
   overflow-y: auto;
   max-width: 100%;

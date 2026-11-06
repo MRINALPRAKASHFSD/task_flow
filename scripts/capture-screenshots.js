@@ -12,12 +12,15 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PORT = 8089;
+const CDP_PORT = 9226;
+const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const screenshotsDir = path.join(ROOT_DIR, 'assets', 'screenshots');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -44,7 +47,10 @@ function createServer() {
       const stats = fs.statSync(filePath);
       if (stats.isFile()) {
         const ext = path.extname(filePath).toLowerCase();
-        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+        res.writeHead(200, {
+          'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+          'Access-Control-Allow-Origin': '*',
+        });
         fs.createReadStream(filePath).pipe(res);
         return;
       }
@@ -59,45 +65,110 @@ function createServer() {
   return server;
 }
 
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const screenshotsDir = path.join(ROOT_DIR, 'assets', 'screenshots');
+class CDPClient {
+  constructor(wsUrl) {
+    this.wsUrl = wsUrl;
+    this.ws = null;
+    this.msgId = 0;
+    this.pending = new Map();
+  }
+
+  async connect() {
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket(this.wsUrl);
+      this.ws.onopen = () => resolve();
+      this.ws.onerror = (err) => reject(err);
+      this.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.id && this.pending.has(data.id)) {
+          const { resolve: res, reject: rej } = this.pending.get(data.id);
+          this.pending.delete(data.id);
+          if (data.error) rej(data.error);
+          else res(data.result);
+        }
+      };
+    });
+  }
+
+  send(method, params = {}) {
+    return new Promise((resolve, reject) => {
+      const id = ++this.msgId;
+      this.pending.set(id, { resolve, reject });
+      this.ws.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  async eval(expression) {
+    const res = await this.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (res.exceptionDetails) {
+      throw new Error(res.exceptionDetails.exception?.description || res.exceptionDetails.text);
+    }
+    return res.result?.value;
+  }
+
+  close() {
+    if (this.ws) {
+      try { this.ws.close(); } catch (_e) {}
+    }
+  }
+}
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const SCREENSHOT_TARGETS = [
   {
     name: 'desktop-light.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=light`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light`,
     width: 1440,
     height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
   },
   {
     name: 'desktop-dark.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=dark`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark`,
     width: 1440,
     height: 900,
+    mobile: false,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
   },
   {
     name: 'mobile-light.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=light`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light`,
     width: 375,
     height: 812,
+    mobile: true,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
   },
   {
     name: 'mobile-dark.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=dark`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark`,
     width: 375,
     height: 812,
+    mobile: true,
+    waitFor: () => 'document.querySelectorAll(".task-card").length >= 6',
   },
   {
     name: 'task-modal.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=light&modal=add`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=light&modal=add`,
     width: 1440,
     height: 900,
+    mobile: false,
+    waitFor: () => 'document.getElementById("modal-overlay")?.classList.contains("is-open")',
   },
   {
     name: 'settings-modal.png',
-    url: `http://localhost:${PORT}/?seed=1&theme=dark&modal=settings`,
+    url: `http://127.0.0.1:${PORT}/?seed=1&theme=dark&modal=settings`,
     width: 1440,
     height: 900,
+    mobile: false,
+    waitFor: () => 'document.getElementById("settings-overlay")?.classList.contains("is-open")',
   },
 ];
 
@@ -112,36 +183,101 @@ async function main() {
   }
 
   const server = createServer();
-  await new Promise((resolve) => server.listen(PORT, resolve));
-  console.log(`Local test server running on http://localhost:${PORT}`);
+  await new Promise((resolve) => server.listen(PORT, '127.0.0.1', resolve));
+  console.log(`Local test server running on http://127.0.0.1:${PORT}`);
+
+  const userDataDir = path.join('/tmp', `tf-ss-ud-${Date.now()}`);
+  const chrome = spawn(CHROME_PATH, [
+    '--headless=new',
+    `--remote-debugging-port=${CDP_PORT}`,
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--no-first-run',
+    `--user-data-dir=${userDataDir}`,
+    '--hide-scrollbars',
+    '--window-size=1440,900',
+    'about:blank',
+  ]);
+
+  let cdp = null;
 
   try {
+    let pageTarget = null;
+    for (let i = 0; i < 40; i++) {
+      await sleep(150);
+      try {
+        const res = await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`);
+        const list = await res.json();
+        const found = list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
+        if (found) {
+          pageTarget = found;
+          break;
+        }
+      } catch (_e) {}
+    }
+
+    if (!pageTarget) {
+      throw new Error('Failed to find Chrome CDP page target');
+    }
+
+    cdp = new CDPClient(pageTarget.webSocketDebuggerUrl);
+    await cdp.connect();
+    await cdp.send('Page.enable');
+    await cdp.send('Runtime.enable');
+
     for (const target of SCREENSHOT_TARGETS) {
       const outputPath = path.join(screenshotsDir, target.name);
       console.log(`Capturing ${target.name} (${target.width}x${target.height})...`);
 
-      const args = [
-        '--headless',
-        '--disable-gpu',
-        '--hide-scrollbars',
-        `--window-size=${target.width},${target.height}`,
-        `--screenshot=${outputPath}`,
-        target.url,
-      ];
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width: target.width,
+        height: target.height,
+        deviceScaleFactor: 1,
+        mobile: target.mobile,
+      });
 
-      const res = spawnSync(CHROME_PATH, args, { encoding: 'utf-8', timeout: 60000 });
-      if (res.error) {
-        console.error(`Error capturing ${target.name}:`, res.error);
-      } else if (fs.existsSync(outputPath)) {
-        const bytes = fs.statSync(outputPath).size;
-        console.log(`✅ Saved ${target.name} (${(bytes / 1024).toFixed(1)} KB)`);
-      } else {
-        console.error(`Failed to produce ${target.name}`, res.stderr || res.stdout);
+      await cdp.send('Page.navigate', { url: target.url });
+
+      // Poll for readiness
+      const startTime = Date.now();
+      let ready = false;
+      while (Date.now() - startTime < 6000) {
+        await sleep(150);
+        try {
+          const isReady = await cdp.eval(target.waitFor());
+          if (isReady) {
+            ready = true;
+            break;
+          }
+        } catch (_e) {}
       }
+
+      if (!ready) {
+        console.warn(`Warning: readiness condition not met for ${target.name}, proceeding with capture...`);
+      }
+
+      // Small settle delay for CSS transitions/animations
+      await sleep(300);
+
+      const shot = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+
+      const buffer = Buffer.from(shot.data, 'base64');
+      fs.writeFileSync(outputPath, buffer);
+      console.log(`✅ Saved ${target.name} (${(buffer.length / 1024).toFixed(1)} KB)`);
     }
   } finally {
+    if (cdp) cdp.close();
+    chrome.kill('SIGKILL');
     server.close();
-    console.log('Test server closed.');
+    try {
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    } catch (_e) {}
+    console.log('Capture complete. Test server closed.');
   }
 }
 
