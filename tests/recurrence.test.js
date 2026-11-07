@@ -18,6 +18,7 @@ import {
   stopTaskRecurrence,
   formatRecurrenceLabel,
 } from '../js/recurrence.js';
+import { parseLocalDate } from '../js/utils.js';
 
 describe('Recurrence Rule Validation', () => {
   test('defaults empty or null rule to type "none"', () => {
@@ -168,6 +169,181 @@ describe('completeRecurringTask Lifecycle', () => {
     assert.equal(formatRecurrenceLabel({ type: 'yearly' }), 'Every year');
     assert.equal(formatRecurrenceLabel({ type: 'custom', interval: 5 }), 'Every 5 days');
     assert.equal(formatRecurrenceLabel({ type: 'none' }), 'Does not repeat');
+  });
+});
+
+describe('Overdue and Future Recurrence Progression (Ponytail Remediation)', () => {
+  test('overdue daily recurring task calculates from reference date, not into the past', () => {
+    const ref = parseLocalDate('2026-11-07');
+    const overdueTask = {
+      id: 'overdue-daily-1',
+      title: 'Daily Medication',
+      status: 'pending',
+      completed: false,
+      dueDate: '2026-10-01',
+      recurrence: { type: 'daily', interval: 1 },
+    };
+    const { completedTask, nextTask } = completeRecurringTask(overdueTask, ref);
+
+    assert.equal(completedTask.status, 'completed');
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-11-08');
+    assert.equal(nextTask.status, 'pending');
+  });
+
+  test('overdue weekly recurring task advances to next scheduled weekday after reference date', () => {
+    const ref = parseLocalDate('2026-11-07'); // Saturday
+    const overdueWeekly = {
+      id: 'overdue-weekly-1',
+      title: 'Weekly Team Sync',
+      status: 'pending',
+      completed: false,
+      dueDate: '2026-10-01', // Thursday
+      recurrence: { type: 'weekly', interval: 1 },
+    };
+    const { nextTask } = completeRecurringTask(overdueWeekly, ref);
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-11-12');
+
+    const nextDueDate = calculateNextDueDate('2026-09-01', { type: 'weekly', interval: 1, daysOfWeek: [2] }, ref);
+    assert.equal(nextDueDate, '2026-11-10');
+  });
+
+  test('future daily recurring task preserves scheduled progression from its due date', () => {
+    const ref = parseLocalDate('2026-11-07');
+    const futureDaily = {
+      id: 'future-daily-1',
+      title: 'Future Daily Check',
+      status: 'pending',
+      completed: false,
+      dueDate: '2026-12-01',
+      recurrence: { type: 'daily', interval: 1 },
+    };
+    const { nextTask } = completeRecurringTask(futureDaily, ref);
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-12-02');
+  });
+
+  test('future weekly recurring task preserves scheduled progression from its due date', () => {
+    const ref = parseLocalDate('2026-11-07');
+    const futureWeekly = {
+      id: 'future-weekly-1',
+      title: 'Future Weekly Review',
+      status: 'pending',
+      completed: false,
+      dueDate: '2026-12-01',
+      recurrence: { type: 'weekly', interval: 1 },
+    };
+    const { nextTask } = completeRecurringTask(futureWeekly, ref);
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-12-08');
+  });
+
+  test('monthly recurrence clamps correctly across varying month lengths', () => {
+    assert.equal(calculateNextDueDate('2025-01-31', { type: 'monthly', interval: 1 }), '2025-02-28');
+    assert.equal(calculateNextDueDate('2026-03-31', { type: 'monthly', interval: 1 }), '2026-04-30');
+
+    const ref = parseLocalDate('2026-10-31');
+    const overdueMonthly = {
+      id: 'monthly-1',
+      title: 'Monthly Accounting Close',
+      status: 'pending',
+      completed: false,
+      dueDate: '2026-08-31',
+      recurrence: { type: 'monthly', interval: 1 },
+    };
+    const { nextTask } = completeRecurringTask(overdueMonthly, ref);
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-11-30');
+  });
+
+  test('handles leap year transitions accurately for monthly and yearly recurrence', () => {
+    assert.equal(calculateNextDueDate('2024-01-31', { type: 'monthly', interval: 1 }), '2024-02-29');
+    assert.equal(calculateNextDueDate('2024-02-29', { type: 'yearly', interval: 1 }), '2025-02-28');
+
+    // Leap-year task completed before February 29: preserves upcoming 2024-02-29 anniversary
+    const refBeforeLeap = parseLocalDate('2024-02-15');
+    const overdueLeapYear = {
+      id: 'yearly-leap-1',
+      title: 'Four-Year Audit',
+      status: 'pending',
+      completed: false,
+      dueDate: '2020-02-29',
+      recurrence: { type: 'yearly', interval: 1 },
+    };
+    const resBefore = completeRecurringTask(overdueLeapYear, refBeforeLeap);
+    assert.ok(resBefore.nextTask);
+    assert.equal(resBefore.nextTask.dueDate, '2024-02-29');
+
+    // Leap-year task completed after February 29: advances to 2025-02-28
+    const refAfterLeap = parseLocalDate('2024-03-01');
+    const resAfter = completeRecurringTask(overdueLeapYear, refAfterLeap);
+    assert.ok(resAfter.nextTask);
+    assert.equal(resAfter.nextTask.dueDate, '2025-02-28');
+  });
+
+  test('non-leap-year February 29 anniversary clamps to February 28', () => {
+    // Completed in non-leap year 2023 before Feb 28 -> clamps to 2023-02-28
+    const refBefore = parseLocalDate('2023-02-10');
+    assert.equal(calculateNextDueDate('2020-02-29', { type: 'yearly', interval: 1 }, refBefore), '2023-02-28');
+
+    // Completed in non-leap year 2023 after Feb 28 -> advances to upcoming 2024 leap year: 2024-02-29
+    const refAfter = parseLocalDate('2023-03-05');
+    assert.equal(calculateNextDueDate('2020-02-29', { type: 'yearly', interval: 1 }, refAfter), '2024-02-29');
+  });
+
+  test('yearly recurrence with interval greater than one preserves multi-year schedule', () => {
+    // Interval 2 from 2020: valid anniversary years are 2022, 2024, 2026
+    // Completed on 2024-02-15 before Feb 29 -> schedules 2024-02-29
+    const refBefore = parseLocalDate('2024-02-15');
+    assert.equal(calculateNextDueDate('2020-02-29', { type: 'yearly', interval: 2 }, refBefore), '2024-02-29');
+
+    // Completed on 2024-03-01 after Feb 29 -> schedules next 2-year anniversary (2026-02-28)
+    const refAfter = parseLocalDate('2024-03-01');
+    assert.equal(calculateNextDueDate('2020-02-29', { type: 'yearly', interval: 2 }, refAfter), '2026-02-28');
+  });
+
+  test('monthly recurrence before and after upcoming due day', () => {
+    // Overdue monthly task due on the 28th (from August)
+    const overdueMonthly = { type: 'monthly', interval: 1 };
+
+    // Reference date before upcoming due day: 2026-11-05 -> schedules 2026-11-28
+    const refBefore = parseLocalDate('2026-11-05');
+    assert.equal(calculateNextDueDate('2026-08-28', overdueMonthly, refBefore), '2026-11-28');
+
+    // Reference date after due day: 2026-11-29 -> schedules 2026-12-28
+    const refAfter = parseLocalDate('2026-11-29');
+    assert.equal(calculateNextDueDate('2026-08-28', overdueMonthly, refAfter), '2026-12-28');
+  });
+
+  test('future-dated and overdue standard yearly tasks', () => {
+    const ref = parseLocalDate('2026-11-07');
+
+    // Future-dated yearly task: 2028-06-15 -> 2029-06-15
+    assert.equal(calculateNextDueDate('2028-06-15', { type: 'yearly', interval: 1 }, ref), '2029-06-15');
+
+    // Overdue yearly task: due 2021-07-10
+    // Reference May 1, 2026 (before July 10) -> 2026-07-10
+    assert.equal(calculateNextDueDate('2021-07-10', { type: 'yearly', interval: 1 }, parseLocalDate('2026-05-01')), '2026-07-10');
+    // Reference August 1, 2026 (after July 10) -> 2027-07-10
+    assert.equal(calculateNextDueDate('2021-07-10', { type: 'yearly', interval: 1 }, parseLocalDate('2026-08-01')), '2027-07-10');
+  });
+
+  test('completes recurring task without due date by advancing from reference date', () => {
+    const ref = parseLocalDate('2026-11-07');
+    const noDueDateTask = {
+      id: 'no-due-date-1',
+      title: 'Continuous Hydration',
+      status: 'pending',
+      completed: false,
+      dueDate: null,
+      recurrence: { type: 'daily', interval: 1 },
+    };
+    const { completedTask, nextTask } = completeRecurringTask(noDueDateTask, ref);
+    assert.equal(completedTask.status, 'completed');
+    assert.ok(nextTask);
+    assert.equal(nextTask.dueDate, '2026-11-08');
+    assert.equal(nextTask.status, 'pending');
   });
 });
 

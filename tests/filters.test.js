@@ -316,4 +316,91 @@ describe('sortTasks', () => {
     assert.equal(sorted[0].title, 'Fresh');
     assert.equal(sorted[1].title, 'Stale');
   });
+
+  test('completing a task under default sorting moves it from top to after pending tasks', () => {
+    const t1 = createTask({ title: 'Task 1', priority: 'high' });
+    const t2 = createTask({ title: 'Task 2', priority: 'medium' });
+    const t3 = createTask({ title: 'Task 3', priority: 'low' });
+
+    // Initially all pending: t1 (high), t2 (med), t3 (low)
+    const initialOrder = sortTasks([t1, t2, t3], 'default');
+    assert.equal(initialOrder[0].id, t1.id);
+    assert.equal(initialOrder[1].id, t2.id);
+    assert.equal(initialOrder[2].id, t3.id);
+
+    // Complete t1
+    const completedT1 = makeCompleted(t1);
+    const updatedOrder = sortTasks([completedT1, t2, t3], 'default');
+
+    // Completed t1 must settle to the bottom; pending t2 and t3 stay above it
+    assert.equal(updatedOrder[0].id, t2.id);
+    assert.equal(updatedOrder[1].id, t3.id);
+    assert.equal(updatedOrder[2].id, completedT1.id);
+  });
+
+  test('priority and due-date sorting sink completed tasks below pending tasks', () => {
+    const tPrioHigh = makeCompleted(createTask({ title: 'High Done', priority: 'high' }));
+    const tPrioLow = createTask({ title: 'Low Pending', priority: 'low' });
+
+    // Under priority sort, completed high-priority task sinks below pending low-priority task
+    const prioSorted = sortTasks([tPrioHigh, tPrioLow], 'priority');
+    assert.equal(prioSorted[0].id, tPrioLow.id);
+    assert.equal(prioSorted[1].id, tPrioHigh.id);
+
+    const tDueEarly = makeCompleted(createTask({ title: 'Due Early Done', dueDate: '2026-01-01' }));
+    const tDueLate = createTask({ title: 'Due Late Pending', dueDate: '2026-12-31' });
+
+    // Under dueDate sort, completed early task sinks below pending late task
+    const dueSorted = sortTasks([tDueEarly, tDueLate], 'dueDate');
+    assert.equal(dueSorted[0].id, tDueLate.id);
+    assert.equal(dueSorted[1].id, tDueEarly.id);
+  });
+
+  test('sort modes unaffected by completion (newest, oldest) preserve identical relative positions', () => {
+    const tNew = { ...createTask({ title: 'New' }), createdAt: '2026-02-01T10:00:00.000Z' };
+    const tOld = { ...createTask({ title: 'Old' }), createdAt: '2026-01-01T10:00:00.000Z' };
+
+    // Newest sort before completion
+    const beforeSort = sortTasks([tOld, tNew], 'newest');
+    assert.equal(beforeSort[0].title, 'New');
+    assert.equal(beforeSort[1].title, 'Old');
+
+    // Complete tNew
+    const completedNew = makeCompleted(tNew);
+    const afterSort = sortTasks([tOld, completedNew], 'newest');
+
+    // Order is strictly preserved under newest
+    assert.equal(afterSort[0].title, 'New');
+    assert.equal(afterSort[1].title, 'Old');
+
+    // Complete tOld
+    const completedOld = makeCompleted(tOld);
+    const oldestSort = sortTasks([completedOld, completedNew], 'oldest');
+    assert.equal(oldestSort[0].title, 'Old');
+    assert.equal(oldestSort[1].title, 'New');
+  });
+
+  test('recurring task insertion respects active sort order', () => {
+    // Existing pending tasks
+    const existingLater = createTask({ title: 'Task Next Week', dueDate: '2026-11-20', priority: 'medium' });
+    const existingFar = createTask({ title: 'Task Next Month', dueDate: '2026-12-01', priority: 'medium' });
+
+    // Completed recurring task
+    const recurringOriginal = makeCompleted(createTask({ title: 'Weekly Meeting', dueDate: '2026-11-05' }));
+
+    // Next recurring task spawned for next week
+    const recurringNext = createTask({ title: 'Weekly Meeting', dueDate: '2026-11-12', priority: 'medium' });
+
+    const allTasks = [existingFar, existingLater, recurringOriginal, recurringNext];
+
+    // Sorted by dueDate
+    const sorted = sortTasks(allTasks, 'dueDate');
+
+    // Pending tasks ordered by dueDate: 2026-11-12 (recurringNext), 2026-11-20 (existingLater), 2026-12-01 (existingFar)
+    // Completed task sinks to bottom: recurringOriginal
+    assert.equal(sorted[0].id, recurringNext.id);
+    assert.equal(sorted[1].id, existingLater.id);
+    assert.equal(sorted[2].id, existingFar.id);
+    assert.equal(sorted[3].id, recurringOriginal.id);
+  });
 });

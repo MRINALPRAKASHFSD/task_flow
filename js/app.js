@@ -18,6 +18,7 @@ import {
   storageAvailable,
   exportAppStateJSON,
   importAppStateJSON,
+  getLastStorageError,
 } from './storage.js';
 
 import {
@@ -586,8 +587,10 @@ function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   applyTheme(state.theme);
   saveTheme(state.theme);
-  persistState();
-  showToast(state.theme === 'dark' ? 'Dark theme enabled.' : 'Light theme enabled.', 'info');
+  const saved = persistState();
+  if (saved) {
+    showToast(state.theme === 'dark' ? 'Dark theme enabled.' : 'Light theme enabled.', 'info');
+  }
 }
 
 // ─── Mobile Sidebar Navigation ────────────────────────────────────────────────
@@ -622,8 +625,11 @@ export function showToast(message, type = 'info', durationMs = null) {
 
 // ─── State Persistence ────────────────────────────────────────────────────────
 
+let lastPersistenceWarningTime = 0;
+const PERSISTENCE_WARNING_THROTTLE_MS = 10000;
+
 function persistState() {
-  saveAppState({
+  const success = saveAppState({
     version: 1,
     tasks: state.tasks,
     preferences: {
@@ -633,6 +639,21 @@ function persistState() {
       sortBy:   state.sortBy,
     },
   });
+
+  if (!success) {
+    const err = getLastStorageError();
+    const now = Date.now();
+    if (now - lastPersistenceWarningTime > PERSISTENCE_WARNING_THROTTLE_MS) {
+      lastPersistenceWarningTime = now;
+      const isQuota = err?.type === 'quota';
+      const msg = isQuota
+        ? 'Warning: Storage quota exceeded. Your changes cannot be saved to disk.'
+        : 'Warning: Failed to save changes to local storage.';
+      showToast(msg, 'error');
+    }
+    return false;
+  }
+  return true;
 }
 
 // ─── Dialog Focus & Background Management ────────────────────────────────────
@@ -827,11 +848,12 @@ async function handleClearCompletedTasks() {
   if (!confirmed) return;
 
   state.tasks = state.tasks.filter((t) => t.status !== 'completed' && !t.completed);
-  saveTasks(state.tasks);
-  persistState();
+  const saved = persistState();
   render();
   closeSettings();
-  showToast(`Cleared ${completedCount} completed task(s).`, 'success');
+  if (saved) {
+    showToast(`Cleared ${completedCount} completed task(s).`, 'success');
+  }
 }
 
 async function handleResetAllTasks() {
@@ -846,11 +868,12 @@ async function handleResetAllTasks() {
   if (!confirmed) return;
 
   state.tasks = [];
-  saveTasks([]);
-  persistState();
+  const saved = persistState();
   render();
   closeSettings();
-  showToast('All tasks have been reset.', 'info');
+  if (saved) {
+    showToast('All tasks have been reset.', 'info');
+  }
 }
 
 // ─── Task Modal Dialog, Counters & Subtask Editor ─────────────────────────────
@@ -1013,6 +1036,7 @@ function handleFormSubmit(event) {
   state.isSubmitting = true;
 
   try {
+    const isEdit = Boolean(state.editingId);
     if (state.editingId) {
       // Edit existing task
       const existing = findTaskById(state.tasks, state.editingId);
@@ -1020,15 +1044,13 @@ function handleFormSubmit(event) {
 
       const updated = updateTask(existing, input);
       state.tasks = replaceTask(state.tasks, updated);
-      showToast('Task updated successfully.', 'success');
     } else {
       // Create new task
       const task = createTask(input);
       state.tasks = addTask(state.tasks, task);
-      showToast('Task created successfully.', 'success');
     }
 
-    persistState();
+    const saved = persistState();
     closeModal();
     if (state.currentView === 'calendar') {
       renderCalendar();
@@ -1036,6 +1058,9 @@ function handleFormSubmit(event) {
       renderAnalytics();
     } else {
       render();
+    }
+    if (saved) {
+      showToast(isEdit ? 'Task updated successfully.' : 'Task created successfully.', 'success');
     }
   } catch (err) {
     showToast(err.message || 'An error occurred while saving the task.', 'error');
@@ -1051,6 +1076,8 @@ function handleToggleStatus(taskId) {
   if (!task) return;
 
   const isCompleting = task.status !== 'completed' && !task.completed;
+  let nextTaskToInsert = null;
+  let successMsg = '';
 
   if (isCompleting && task.recurrence) {
     // Deterministic recurrence completion engine
@@ -1064,28 +1091,156 @@ function handleToggleStatus(taskId) {
       );
       if (!existingNext) {
         state.tasks = addTask(state.tasks, nextTask);
-        showToast(`Task completed! Next recurrence scheduled for ${nextTask.dueDate}.`, 'success');
+        nextTaskToInsert = nextTask;
+        successMsg = `Task completed! Next recurrence scheduled for ${nextTask.dueDate}.`;
       } else {
-        showToast('Task completed.', 'success');
+        successMsg = 'Task completed.';
       }
+    } else {
+      successMsg = 'Task completed.';
     }
   } else {
     const toggled = toggleTaskStatus(task);
     state.tasks = replaceTask(state.tasks, toggled);
-    const msg = (toggled.status === 'completed' || toggled.completed)
+    successMsg = (toggled.status === 'completed' || toggled.completed)
       ? 'Task marked as completed.'
       : 'Task reopened.';
-    showToast(msg, 'success');
   }
 
-  persistState();
+  const saved = persistState();
   if (state.currentView === 'calendar') {
     renderCalendar();
   } else if (state.currentView === 'analytics') {
     renderAnalytics();
   } else {
-    render();
+    updateTaskListAfterToggle(taskId, nextTaskToInsert);
   }
+
+  if (saved && successMsg) {
+    showToast(successMsg, 'success');
+  }
+}
+
+/**
+ * Perform a targeted in-place DOM update when toggling a single task's status.
+ * Avoids destroying and re-allocating the entire task list DOM tree.
+ *
+ * @param {string} taskId
+ * @param {import('./tasks.js').Task|null} [nextTaskToInsert]
+ */
+function updateTaskListAfterToggle(taskId, nextTaskToInsert = null) {
+  // If a recurring occurrence was spawned, use full render to ensure the new task
+  // is placed at its exact sorted and filtered position without duplicate cards.
+  if (nextTaskToInsert) {
+    const wasFocused = dom.taskList?.querySelector(`[data-task-id="${taskId}"]`)?.contains(document.activeElement);
+    render();
+    if (wasFocused) {
+      const targetCard = dom.taskList?.querySelector(`[data-task-id="${taskId}"]`)
+        || dom.taskList?.querySelector(`[data-task-id="${nextTaskToInsert.id}"]`);
+      const targetFocus = targetCard?.querySelector('.task-card__checkbox') || dom.btnAddTask;
+      if (targetFocus && typeof targetFocus.focus === 'function') {
+        targetFocus.focus();
+      }
+    }
+    return;
+  }
+
+  // If complex grouping or search query is active, fall back to full render
+  if (state.search || (state.groupBy && state.groupBy !== 'none')) {
+    render();
+    return;
+  }
+
+  const updatedTask = findTaskById(state.tasks, taskId);
+  if (!updatedTask || !dom.taskList) {
+    render();
+    return;
+  }
+
+  const card = dom.taskList.querySelector(`[data-task-id="${taskId}"]`);
+  if (!card) {
+    render();
+    return;
+  }
+
+
+  // Evaluate whether the toggled task still qualifies for display under current filter settings
+  const matchesFilter = applyFilters([updatedTask], {
+    status:   state.filter,
+    category: state.category,
+    tag:      state.tagFilter,
+    search:   state.search,
+    sortBy:   state.sortBy,
+  }).length > 0;
+
+  if (matchesFilter) {
+    // Check if active sort order depends on completion status or update timestamp
+    const isOrderInvariant = state.sortBy === 'newest' || state.sortBy === 'oldest';
+    if (!isOrderInvariant) {
+      const wasFocused = card.contains(document.activeElement);
+      render();
+      if (wasFocused) {
+        const newCard = dom.taskList?.querySelector(`[data-task-id="${taskId}"]`);
+        const newCheckbox = newCard?.querySelector('.task-card__checkbox');
+        if (newCheckbox && typeof newCheckbox.focus === 'function') {
+          newCheckbox.focus();
+        }
+      }
+      return;
+    }
+
+    // In-place DOM update: mutate existing card without tearing down other tasks
+    const isCompleted = updatedTask.status === 'completed' || Boolean(updatedTask.completed);
+    card.classList.toggle('is-completed', isCompleted);
+
+    const checkbox = card.querySelector('.task-card__checkbox');
+    if (checkbox) {
+      checkbox.checked = isCompleted;
+      checkbox.setAttribute('aria-label', isCompleted ? 'Reopen task' : 'Mark task completed');
+    }
+
+    const statusBadge = card.querySelector('.badge-status-completed, .badge-status-pending');
+    if (statusBadge) {
+      statusBadge.className = `badge badge-status-${isCompleted ? 'completed' : 'pending'}`;
+      statusBadge.replaceChildren();
+      if (isCompleted) {
+        const checkSvg = createCheckIcon(12);
+        if (checkSvg) statusBadge.appendChild(checkSvg);
+        statusBadge.appendChild(document.createTextNode(' Completed'));
+      } else {
+        statusBadge.textContent = '○ Pending';
+      }
+    }
+  } else {
+    // Task no longer satisfies active filter (e.g., completed while viewing 'pending')
+    // Preserve keyboard focus if the user was focused within this card before removal
+    const wasFocused = card.contains(document.activeElement);
+    const fallbackFocus = card.nextElementSibling?.querySelector('.task-card__checkbox')
+      || card.previousElementSibling?.querySelector('.task-card__checkbox')
+      || dom.btnAddTask;
+
+    card.remove();
+
+    if (wasFocused && fallbackFocus && typeof fallbackFocus.focus === 'function') {
+      fallbackFocus.focus();
+    }
+  }
+
+  // Synchronize counts, overview stats, and sidebar indicators
+  const visibleCards = dom.taskList.querySelectorAll('.task-card');
+  const count = visibleCards.length;
+  setText(dom.taskCount, `${count} ${count === 1 ? 'task' : 'tasks'}`);
+
+  if (count === 0) {
+    dom.taskList.style.display = 'none';
+    dom.emptyState.style.display = 'block';
+  } else {
+    dom.taskList.style.display = 'flex';
+    dom.emptyState.style.display = 'none';
+  }
+
+  renderStats();
+  updateSidebarBadges();
 }
 
 async function handleDeleteTask(taskId) {
@@ -1096,7 +1251,7 @@ async function handleDeleteTask(taskId) {
   if (!confirmed) return;
 
   state.tasks = deleteTask(state.tasks, taskId);
-  persistState();
+  const saved = persistState();
   if (state.currentView === 'calendar') {
     renderCalendar();
   } else if (state.currentView === 'analytics') {
@@ -1104,7 +1259,9 @@ async function handleDeleteTask(taskId) {
   } else {
     render();
   }
-  showToast('Task deleted.', 'info');
+  if (saved) {
+    showToast('Task deleted.', 'info');
+  }
 }
 
 function handleEditTask(taskId) {
@@ -2549,8 +2706,10 @@ function wireEvents() {
       state.theme = 'light';
       applyTheme('light');
       saveTheme('light');
-      persistState();
-      showToast('Theme set to Light.', 'info');
+      const saved = persistState();
+      if (saved) {
+        showToast('Theme set to Light.', 'info');
+      }
     });
   }
   if (dom.btnThemeDark) {
@@ -2558,8 +2717,10 @@ function wireEvents() {
       state.theme = 'dark';
       applyTheme('dark');
       saveTheme('dark');
-      persistState();
-      showToast('Theme set to Dark.', 'info');
+      const saved = persistState();
+      if (saved) {
+        showToast('Theme set to Dark.', 'info');
+      }
     });
   }
   if (dom.btnExportJson) dom.btnExportJson.addEventListener('click', handleExportJSON);

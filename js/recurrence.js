@@ -77,17 +77,25 @@ export function validateRecurrenceRule(rule) {
 
 /**
  * Calculate the next due date based on the current due date and recurrence pattern.
+ * If the current due date is already in the past relative to referenceDate,
+ * progression advances from referenceDate so overdue tasks do not spawn another past date.
  *
- * @param {string|Date} baseDateInput
+ * @param {string|Date|null} baseDateInput
  * @param {Object} recurrenceRule
- * @param {Date} [referenceDate]
+ * @param {string|Date|null} [referenceDate=null]
  * @returns {string|null} YYYY-MM-DD or null if recurrence has ended
  */
-export function calculateNextDueDate(baseDateInput, recurrenceRule, referenceDate = new Date()) {
+export function calculateNextDueDate(baseDateInput, recurrenceRule, referenceDate = null) {
   const rule = validateRecurrenceRule(recurrenceRule);
   if (rule.type === 'none') return null;
 
-  const base = parseLocalDate(baseDateInput) || parseLocalDate(referenceDate) || new Date();
+  const parsedBase = parseLocalDate(baseDateInput);
+  const parsedRef = parseLocalDate(referenceDate);
+
+  // If baseDateInput is in the past relative to referenceDate, calculate from referenceDate
+  const isOverdue = Boolean(parsedBase && parsedRef && parsedBase.getTime() < parsedRef.getTime());
+  const base = isOverdue ? parsedRef : (parsedBase || parsedRef || new Date());
+
   let next = new Date(base.getFullYear(), base.getMonth(), base.getDate());
 
   switch (rule.type) {
@@ -119,6 +127,14 @@ export function calculateNextDueDate(baseDateInput, recurrenceRule, referenceDat
         if (!found) {
           next.setDate(next.getDate() + 7 * rule.interval);
         }
+      } else if (isOverdue && parsedBase) {
+        // Preserve original weekday schedule when advancing overdue weekly tasks
+        const targetDay = parsedBase.getDay();
+        let daysAhead = (targetDay - base.getDay() + 7) % 7;
+        if (daysAhead === 0) {
+          daysAhead = 7 * rule.interval;
+        }
+        next.setDate(next.getDate() + daysAhead);
       } else {
         next.setDate(next.getDate() + 7 * rule.interval);
       }
@@ -126,26 +142,73 @@ export function calculateNextDueDate(baseDateInput, recurrenceRule, referenceDat
     }
 
     case 'monthly': {
-      // Month-end clamp handling: e.g. Jan 31 -> Feb 28 (or 29 in leap year)
-      const targetMonthIndex = base.getMonth() + rule.interval;
-      const targetYear = base.getFullYear() + Math.floor(targetMonthIndex / 12);
-      const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12;
+      if (isOverdue && parsedBase) {
+        // Find next scheduled monthly due day on or after referenceDate
+        const baseTotalMonths = parsedBase.getFullYear() * 12 + parsedBase.getMonth();
+        const refTotalMonths = parsedRef.getFullYear() * 12 + parsedRef.getMonth();
+        const monthDiff = Math.max(0, refTotalMonths - baseTotalMonths);
+        const stepMonths = Math.ceil(monthDiff / rule.interval) * rule.interval;
+        let targetTotalMonths = baseTotalMonths + stepMonths;
 
-      const daysInTargetMonth = getDaysInMonth(targetYear, normalizedMonth);
-      const targetDay = Math.min(base.getDate(), daysInTargetMonth);
+        const calcMonthlyDate = (totalMonths) => {
+          const year = Math.floor(totalMonths / 12);
+          const month = ((totalMonths % 12) + 12) % 12;
+          const days = getDaysInMonth(year, month);
+          const day = Math.min(parsedBase.getDate(), days);
+          return new Date(year, month, day);
+        };
 
-      next = new Date(targetYear, normalizedMonth, targetDay);
+        let candidate = calcMonthlyDate(targetTotalMonths);
+        if (candidate.getTime() <= parsedRef.getTime()) {
+          targetTotalMonths += rule.interval;
+          candidate = calcMonthlyDate(targetTotalMonths);
+        }
+        next = candidate;
+      } else {
+        // Month-end clamp handling: e.g. Jan 31 -> Feb 28 (or 29 in leap year)
+        const targetMonthIndex = base.getMonth() + rule.interval;
+        const targetYear = base.getFullYear() + Math.floor(targetMonthIndex / 12);
+        const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12;
+
+        const daysInTargetMonth = getDaysInMonth(targetYear, normalizedMonth);
+        const targetDay = Math.min(base.getDate(), daysInTargetMonth);
+
+        next = new Date(targetYear, normalizedMonth, targetDay);
+      }
       break;
     }
 
     case 'yearly': {
-      // Leap year handling: e.g. Feb 29 2024 -> Feb 28 2025
-      const targetYear = base.getFullYear() + rule.interval;
-      const month = base.getMonth();
-      const daysInTargetMonth = getDaysInMonth(targetYear, month);
-      const targetDay = Math.min(base.getDate(), daysInTargetMonth);
+      if (isOverdue && parsedBase) {
+        // Find next scheduled anniversary on or after referenceDate without skipping current year
+        const baseYear = parsedBase.getFullYear();
+        const refYear = parsedRef.getFullYear();
+        const yearDiff = Math.max(0, refYear - baseYear);
+        const stepYears = Math.ceil(yearDiff / rule.interval) * rule.interval;
+        let targetYear = baseYear + stepYears;
+        const targetMonth = parsedBase.getMonth();
 
-      next = new Date(targetYear, month, targetDay);
+        const calcYearlyDate = (year) => {
+          const days = getDaysInMonth(year, targetMonth);
+          const day = Math.min(parsedBase.getDate(), days);
+          return new Date(year, targetMonth, day);
+        };
+
+        let candidate = calcYearlyDate(targetYear);
+        if (candidate.getTime() <= parsedRef.getTime()) {
+          targetYear += rule.interval;
+          candidate = calcYearlyDate(targetYear);
+        }
+        next = candidate;
+      } else {
+        // Standard future progression with leap-year clamping: e.g. Feb 29 2024 -> Feb 28 2025
+        const targetYear = base.getFullYear() + rule.interval;
+        const month = base.getMonth();
+        const daysInTargetMonth = getDaysInMonth(targetYear, month);
+        const targetDay = Math.min(base.getDate(), daysInTargetMonth);
+
+        next = new Date(targetYear, month, targetDay);
+      }
       break;
     }
 
@@ -181,9 +244,8 @@ export function calculateNextDueDate(baseDateInput, recurrenceRule, referenceDat
  * @returns {{ completedTask: import('./tasks.js').Task, nextTask: import('./tasks.js').Task|null }}
  */
 export function completeRecurringTask(task, referenceDate = new Date()) {
-  const ref = referenceDate instanceof Date
-    ? referenceDate
-    : (referenceDate && referenceDate.referenceDate instanceof Date ? referenceDate.referenceDate : new Date());
+  const ref = parseLocalDate(referenceDate)
+    || (referenceDate instanceof Date && !isNaN(referenceDate.getTime()) ? referenceDate : new Date());
 
   const now = nowISO();
   const completedTask = {

@@ -12,6 +12,12 @@ import { PRIORITIES } from './tasks.js';
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
+/** Maximum allowable JSON import file size (5 MB) to prevent browser memory exhaustion. */
+export const MAX_IMPORT_SIZE_BYTES = 5 * 1024 * 1024;
+
+/** Maximum allowable task count per import to ensure performant UI rendering and quota safety. */
+export const MAX_IMPORT_TASKS_LIMIT = 5000;
+
 export const STORAGE_KEYS = {
   TASKS:   'taskflow_tasks',
   THEME:   'taskflow_theme',
@@ -21,6 +27,43 @@ export const STORAGE_KEYS = {
 
 // In-memory fallback storage used ONLY when localStorage is unavailable or throws errors
 const memoryStore = new Map();
+
+/**
+ * Diagnostic tracking of last encountered storage error.
+ * @type {{ type: 'quota'|'write_error'|'serialization_error'|'unavailable', message: string, key?: string, timestamp: number }|null}
+ */
+let lastStorageError = null;
+
+/**
+ * Inspect whether a thrown storage error is a QuotaExceededError.
+ *
+ * @param {Error|*} err
+ * @returns {boolean}
+ */
+export function isQuotaError(err) {
+  if (!err) return false;
+  return err.name === 'QuotaExceededError'
+    || err.code === 22
+    || err.code === 1014
+    || err.number === -2146828281
+    || /quota/i.test(err.message || '');
+}
+
+/**
+ * Retrieve the last captured storage error.
+ *
+ * @returns {typeof lastStorageError}
+ */
+export function getLastStorageError() {
+  return lastStorageError;
+}
+
+/**
+ * Reset the last captured storage error.
+ */
+export function clearLastStorageError() {
+  lastStorageError = null;
+}
 
 /**
  * Check whether localStorage is available and functional.
@@ -67,15 +110,29 @@ function rawSet(key, value) {
   try {
     if (typeof localStorage !== 'undefined' && localStorage !== null) {
       localStorage.setItem(key, value);
+      lastStorageError = null;
       return true;
     }
   } catch (err) {
+    const quota = isQuotaError(err);
     console.warn('[TaskFlow] localStorage write failed, using in-memory store:', err.message);
+    lastStorageError = {
+      type: quota ? 'quota' : 'write_error',
+      message: err.message,
+      key,
+      timestamp: Date.now(),
+    };
     memoryStore.set(key, value);
     return false;
   }
+  lastStorageError = {
+    type: 'unavailable',
+    message: 'LocalStorage is unavailable or disabled.',
+    key,
+    timestamp: Date.now(),
+  };
   memoryStore.set(key, value);
-  return true;
+  return false;
 }
 
 /**
@@ -126,6 +183,12 @@ function storageSet(key, value) {
     return rawSet(key, JSON.stringify(value));
   } catch (err) {
     console.error('[TaskFlow] Failed to write to localStorage:', err);
+    lastStorageError = {
+      type: 'serialization_error',
+      message: err.message,
+      key,
+      timestamp: Date.now(),
+    };
     return false;
   }
 }
@@ -294,12 +357,24 @@ export function saveAppState(state) {
     },
   };
 
+  // Primary critical write: full versioned payload with all tasks and preferences
   const successData = storageSet(STORAGE_KEYS.DATA, payload);
-  const successTasks = storageSet(STORAGE_KEYS.TASKS, payload.tasks);
-  storageSet(STORAGE_KEYS.THEME, payload.preferences.theme);
-  storageSet(STORAGE_KEYS.FILTER, payload.preferences.filter);
+  if (!successData) {
+    return false;
+  }
 
-  return successData && successTasks;
+  // Secondary legacy preference writes: required for legacy loaders and unversioned fallbacks
+  const themeSuccess = storageSet(STORAGE_KEYS.THEME, payload.preferences.theme);
+  if (!themeSuccess) {
+    return false;
+  }
+
+  const filterSuccess = storageSet(STORAGE_KEYS.FILTER, payload.preferences.filter);
+  if (!filterSuccess) {
+    return false;
+  }
+
+  return true;
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -310,16 +385,17 @@ export function saveAppState(state) {
  * @returns {import('./tasks.js').Task[]}
  */
 export function loadTasks() {
+  // Check versioned state first
+  const versioned = storageGet(STORAGE_KEYS.DATA, null);
+  if (versioned && typeof versioned === 'object' && Array.isArray(versioned.tasks)) {
+    return versioned.tasks;
+  }
+
+  // Fallback to legacy unversioned tasks key
   const tasks = storageGet(STORAGE_KEYS.TASKS, null);
   if (tasks !== null) {
     if (!Array.isArray(tasks)) return [];
     return tasks;
-  }
-
-  // If TASKS key is not set, check DATA key
-  const versioned = storageGet(STORAGE_KEYS.DATA, null);
-  if (versioned && typeof versioned === 'object' && Array.isArray(versioned.tasks)) {
-    return versioned.tasks;
   }
 
   return [];
@@ -333,6 +409,9 @@ export function loadTasks() {
  */
 export function saveTasks(tasks) {
   const success = storageSet(STORAGE_KEYS.TASKS, tasks);
+  if (!success) {
+    return false;
+  }
 
   // Keep versioned data in sync if available
   const existing = storageGet(STORAGE_KEYS.DATA, null);
@@ -346,9 +425,7 @@ export function saveTasks(tasks) {
       category: 'all',
     },
   };
-  storageSet(STORAGE_KEYS.DATA, versionedPayload);
-
-  return success;
+  return storageSet(STORAGE_KEYS.DATA, versionedPayload);
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -424,6 +501,14 @@ export function importAppStateJSON(jsonString) {
     return { success: false, error: 'Empty or invalid JSON content.' };
   }
 
+  // Boundary check: enforce 5MB maximum import size before parsing
+  if (jsonString.length > MAX_IMPORT_SIZE_BYTES) {
+    return {
+      success: false,
+      error: `Import payload exceeds 5MB size limit (${(jsonString.length / (1024 * 1024)).toFixed(1)}MB).`,
+    };
+  }
+
   let parsed;
   try {
     parsed = JSON.parse(jsonString);
@@ -463,6 +548,14 @@ export function importAppStateJSON(jsonString) {
 
     rawTasks = parsed.tasks;
     rawPreferences = parsed.preferences;
+  }
+
+  // Boundary check: enforce maximum task limit to protect UI responsiveness and quota
+  if (rawTasks.length > MAX_IMPORT_TASKS_LIMIT) {
+    return {
+      success: false,
+      error: `Import exceeds maximum limit of ${MAX_IMPORT_TASKS_LIMIT} tasks (found ${rawTasks.length}).`,
+    };
   }
 
   // Validate duplicate IDs

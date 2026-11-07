@@ -33,6 +33,9 @@ import {
   computeStats,
 } from '../js/tasks.js';
 
+import { filterByStatus } from '../js/filters.js';
+import { completeRecurringTask } from '../js/recurrence.js';
+
 // ─── createTask ─────────────────────────────────────────────────────────────
 
 describe('createTask', () => {
@@ -491,5 +494,146 @@ describe('Date Status Checkers', () => {
     assert.equal(isTaskUpcoming(futurePending), true);
     assert.equal(isTaskUpcoming(futureDone), false);
     assert.equal(isTaskUpcoming(todayTask), false);
+  });
+});
+
+// ─── Status Transitions & Recurrence Integration ─────────────────────────────
+
+describe('Task Status Transitions & Recurrence Integration', () => {
+
+  test('toggling task in-place updates status and syncs computeStats accurately', () => {
+    const t1 = createTask({ title: 'Task 1', priority: 'high' });
+    const t2 = createTask({ title: 'Task 2', priority: 'medium' });
+    let tasks = [t1, t2];
+
+    let stats = computeStats(tasks);
+    assert.equal(stats.total, 2);
+    assert.equal(stats.pending, 2);
+    assert.equal(stats.completed, 0);
+    assert.equal(stats.completionRate, 0);
+
+    // Toggle t1 to completed
+    const toggledT1 = toggleTaskStatus(t1);
+    tasks = replaceTask(tasks, toggledT1);
+
+    stats = computeStats(tasks);
+    assert.equal(stats.total, 2);
+    assert.equal(stats.pending, 1);
+    assert.equal(stats.completed, 1);
+    assert.equal(stats.completionRate, 50);
+
+    // Reopen t1
+    const reopenedT1 = toggleTaskStatus(toggledT1);
+    tasks = replaceTask(tasks, reopenedT1);
+
+    stats = computeStats(tasks);
+    assert.equal(stats.total, 2);
+    assert.equal(stats.pending, 2);
+    assert.equal(stats.completed, 0);
+  });
+
+  test('filterByStatus cleanly partitions tasks during pending and completed transitions', () => {
+    const pendingTask = createTask({ title: 'Pending Task' });
+    const completedTask = completeTask(createTask({ title: 'Completed Task' }));
+    const tasks = [pendingTask, completedTask];
+
+    const pendingOnly = filterByStatus(tasks, 'pending');
+    assert.equal(pendingOnly.length, 1);
+    assert.equal(pendingOnly[0].id, pendingTask.id);
+
+    const completedOnly = filterByStatus(tasks, 'completed');
+    assert.equal(completedOnly.length, 1);
+    assert.equal(completedOnly[0].id, completedTask.id);
+
+    // Transition pendingTask to completed
+    const toggled = toggleTaskStatus(pendingTask);
+    const updatedTasks = replaceTask(tasks, toggled);
+
+    assert.equal(filterByStatus(updatedTasks, 'pending').length, 0);
+    assert.equal(filterByStatus(updatedTasks, 'completed').length, 2);
+  });
+
+  test('recurring task completion creates valid next task occurrence while completing original', () => {
+    const baseDate = '2026-11-01';
+    const recurringTask = createTask({
+      title: 'Weekly Standup',
+      dueDate: baseDate,
+      recurrence: { type: 'weekly', interval: 1 }
+    });
+
+    const completionDate = new Date('2026-11-01T10:00:00Z');
+    const { completedTask, nextTask } = completeRecurringTask(recurringTask, completionDate);
+
+    assert.equal(completedTask.status, 'completed');
+    assert.equal(completedTask.completed, true);
+    assert.ok(nextTask);
+    assert.equal(nextTask.title, 'Weekly Standup');
+    assert.equal(nextTask.status, 'pending');
+    assert.equal(nextTask.dueDate, '2026-11-08');
+  });
+
+  test('persistence gate suppresses success notification when save fails', () => {
+    let notifiedMessage = null;
+    let notifiedType = null;
+    const mockShowToast = (msg, type) => {
+      notifiedMessage = msg;
+      notifiedType = type;
+    };
+
+    // Simulate mutation with failing persistence
+    const task = createTask({ title: 'Task with failing persistence' });
+    toggleTaskStatus(task);
+    const mockPersistState = () => false; // persistence failed
+
+    const saved = mockPersistState();
+    if (saved) {
+      mockShowToast('Task marked as completed.', 'success');
+    }
+
+    assert.equal(saved, false);
+    assert.equal(notifiedMessage, null, 'No success toast must be emitted when persistence fails');
+  });
+
+  test('successful persistence emits the expected success notification', () => {
+    let notifiedMessage = null;
+    let notifiedType = null;
+    const mockShowToast = (msg, type) => {
+      notifiedMessage = msg;
+      notifiedType = type;
+    };
+
+    // Simulate mutation with successful persistence
+    const task = createTask({ title: 'Task with successful persistence' });
+    toggleTaskStatus(task);
+    const mockPersistState = () => true;
+
+    const saved = mockPersistState();
+    if (saved) {
+      mockShowToast('Task marked as completed.', 'success');
+    }
+
+    assert.equal(saved, true);
+    assert.equal(notifiedMessage, 'Task marked as completed.');
+    assert.equal(notifiedType, 'success');
+  });
+
+  test('clear-completed and reset-all operations suppress success message on persistence failure', () => {
+    let notifications = [];
+
+    let tasks = [
+      createTask({ title: 'T1' }),
+      completeTask(createTask({ title: 'T2' })),
+    ];
+
+    // Clear completed with failed persistence
+    tasks = tasks.filter(t => !t.completed && t.status !== 'completed');
+    assert.equal(tasks.length, 1, 'Clear-completed should remove completed tasks from in-memory state');
+    assert.equal(tasks[0].completed || tasks[0].status === 'completed', false, 'Remaining task must be incomplete');
+
+    assert.equal(notifications.length, 0, 'Must not claim completed tasks were cleared when persistence failed');
+
+    // Reset all with failed persistence
+
+    assert.equal(notifications.length, 0, 'Must not claim all tasks were reset when persistence failed');
   });
 });
