@@ -604,7 +604,7 @@ describe('Task Status Transitions & Recurrence Integration', () => {
 
     // Simulate mutation with successful persistence
     const task = createTask({ title: 'Task with successful persistence' });
-    const toggled = toggleTaskStatus(task);
+    toggleTaskStatus(task);
     const mockPersistState = () => true;
 
     const saved = mockPersistState();
