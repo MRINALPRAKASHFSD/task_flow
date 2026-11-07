@@ -630,8 +630,6 @@ describe('Task Status Transitions & Recurrence Integration', () => {
     assert.equal(tasks.length, 1, 'Clear-completed should remove completed tasks from in-memory state');
     assert.equal(tasks[0].completed || tasks[0].status === 'completed', false, 'Remaining task must be incomplete');
 
-    let persistSuccess = false; // quota failure
-
     assert.equal(notifications.length, 0, 'Must not claim completed tasks were cleared when persistence failed');
 
     // Reset all with failed persistence
