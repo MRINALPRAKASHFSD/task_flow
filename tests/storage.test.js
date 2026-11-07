@@ -48,6 +48,11 @@ const {
   clearMemoryStore,
   exportAppStateJSON,
   importAppStateJSON,
+  MAX_IMPORT_SIZE_BYTES,
+  MAX_IMPORT_TASKS_LIMIT,
+  isQuotaError,
+  getLastStorageError,
+  clearLastStorageError,
 } = await import('../js/storage.js');
 
 // ─── storageAvailable ──────────────────────────────────────────────────────
@@ -240,7 +245,31 @@ describe('loadAppState / saveAppState', () => {
     assert.equal(loaded.preferences.category, 'Work');
   });
 
-  test('loadAppState falls back to legacy keys if taskflow_data is absent', () => {
+  test('saveAppState avoids redundant writes to STORAGE_KEYS.TASKS while persisting versioned data', () => {
+    const payload = {
+      version: 1,
+      tasks: [{ id: 'nr-1', title: 'Non-redundant task', status: 'pending', priority: 'medium', category: 'General', completed: false, dueDate: null }],
+      preferences: { theme: 'light', filter: 'all', sortBy: 'newest', category: 'all' },
+    };
+
+    const saved = saveAppState(payload);
+    assert.equal(saved, true);
+
+    // Primary versioned key must exist with payload
+    const rawData = localStorage.getItem(STORAGE_KEYS.DATA);
+    assert.ok(rawData);
+    const parsedData = JSON.parse(rawData);
+    assert.equal(parsedData.tasks[0].id, 'nr-1');
+
+    // Duplicate key must not be written, saving quota
+    assert.equal(localStorage.getItem(STORAGE_KEYS.TASKS), null);
+
+    // Both state loader and legacy task loader retrieve the data from STORAGE_KEYS.DATA
+    assert.equal(loadAppState().tasks[0].id, 'nr-1');
+    assert.equal(loadTasks()[0].id, 'nr-1');
+  });
+
+  test('loadAppState falls back to legacy keys if taskflow_data is absent and migrates data', () => {
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify([
       { id: 'leg-1', title: 'Legacy Task', status: 'pending', priority: 'high' }
     ]));
@@ -253,6 +282,12 @@ describe('loadAppState / saveAppState', () => {
     assert.equal(state.tasks[0].category, 'General');
     assert.equal(state.preferences.theme, 'dark');
     assert.equal(state.preferences.filter, 'completed');
+
+    // Migration must have populated STORAGE_KEYS.DATA
+    const migratedRaw = localStorage.getItem(STORAGE_KEYS.DATA);
+    assert.ok(migratedRaw);
+    const migrated = JSON.parse(migratedRaw);
+    assert.equal(migrated.tasks[0].id, 'leg-1');
   });
 
   test('loadAppState handles corrupt JSON safely', () => {
@@ -462,5 +497,190 @@ describe('exportAppStateJSON / importAppStateJSON', () => {
     const resType = importAppStateJSON(JSON.stringify({ tasks: 'not an array' }));
     assert.equal(resType.success, false);
     assert.equal(loadAppState().tasks[0].id, 'initial-task-1');
+  });
+
+  test('importAppStateJSON rejects payloads exceeding 5MB size limit', () => {
+    // Generate a payload that exceeds 5MB (5 * 1024 * 1024 bytes)
+    const padding = 'x'.repeat(MAX_IMPORT_SIZE_BYTES + 10);
+    const res = importAppStateJSON(padding);
+    assert.equal(res.success, false);
+    assert.match(res.error, /exceeds 5MB size limit/i);
+  });
+
+  test('importAppStateJSON rejects task arrays exceeding 5,000 tasks limit', () => {
+    const excessiveTasks = [];
+    for (let i = 0; i < MAX_IMPORT_TASKS_LIMIT + 1; i++) {
+      excessiveTasks.push({ id: `task-${i}`, title: `Task ${i}` });
+    }
+    const payload = JSON.stringify({ version: 1, tasks: excessiveTasks });
+    const res = importAppStateJSON(payload);
+    assert.equal(res.success, false);
+    assert.match(res.error, /exceeds maximum limit of 5000 tasks/i);
+  });
+});
+
+describe('Storage Error Handling & Quota Detection', () => {
+  beforeEach(() => {
+    stubStorage.clear();
+    clearMemoryStore();
+    clearLastStorageError();
+  });
+
+  test('isQuotaError accurately detects QuotaExceededError across browser engines', () => {
+    assert.equal(isQuotaError(new Error('QuotaExceededError')), true);
+    assert.equal(isQuotaError({ name: 'QuotaExceededError' }), true);
+    assert.equal(isQuotaError({ code: 22 }), true);
+    assert.equal(isQuotaError({ code: 1014 }), true);
+    assert.equal(isQuotaError(new Error('NS_ERROR_DOM_QUOTA_REACHED')), true);
+    assert.equal(isQuotaError(new Error('Persistent storage quota has been exceeded')), true);
+    assert.equal(isQuotaError(new Error('Generic network failure')), false);
+    assert.equal(isQuotaError(null), false);
+  });
+
+  test('saveAppState captures quota error and returns false on quota exhaustion', () => {
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = () => {
+      const err = new Error('QuotaExceededError: LocalStorage quota reached');
+      err.name = 'QuotaExceededError';
+      throw err;
+    };
+
+    try {
+      const state = {
+        version: 1,
+        tasks: [{ id: 'q-1', title: 'Quota task', priority: 'high', category: 'Work', status: 'pending', completed: false, dueDate: null }],
+        preferences: { theme: 'light', filter: 'all', sortBy: 'newest', category: 'all' }
+      };
+
+      const result = saveAppState(state);
+      assert.equal(result, false);
+
+      const lastErr = getLastStorageError();
+      assert.ok(lastErr);
+      assert.equal(lastErr.type, 'quota');
+      assert.match(lastErr.message, /quota/i);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('saveAppState halts partial writes when primary versioned payload fails', () => {
+    let attemptedKeys = [];
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = (k) => {
+      attemptedKeys.push(k);
+      if (k === STORAGE_KEYS.DATA) {
+        throw new Error('Disk write error');
+      }
+    };
+
+    try {
+      const state = {
+        version: 1,
+        tasks: [{ id: 'pw-1', title: 'Partial write task' }],
+        preferences: { theme: 'dark', filter: 'pending', sortBy: 'priority', category: 'Work' }
+      };
+
+      const result = saveAppState(state);
+      assert.equal(result, false);
+
+      // Must not continue to write THEME and FILTER keys when DATA fails
+      assert.deepEqual(attemptedKeys, [STORAGE_KEYS.DATA]);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('saveAppState returns false when secondary THEME write fails', () => {
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = (k, v) => {
+      if (k === STORAGE_KEYS.THEME) {
+        const err = new Error('Quota exceeded on theme key');
+        err.name = 'QuotaExceededError';
+        throw err;
+      }
+      return originalSetItem.call(stubStorage, k, v);
+    };
+
+    try {
+      const state = {
+        version: 1,
+        tasks: [{ id: 'sec-1', title: 'Secondary write test' }],
+        preferences: { theme: 'dark', filter: 'all', sortBy: 'newest', category: 'all' }
+      };
+
+      const result = saveAppState(state);
+      assert.equal(result, false);
+
+      const err = getLastStorageError();
+      assert.ok(err);
+      assert.equal(err.key, STORAGE_KEYS.THEME);
+      assert.equal(err.type, 'quota');
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('saveAppState returns false when secondary FILTER write fails', () => {
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = (k, v) => {
+      if (k === STORAGE_KEYS.FILTER) {
+        throw new Error('Write error on filter key');
+      }
+      return originalSetItem.call(stubStorage, k, v);
+    };
+
+    try {
+      const state = {
+        version: 1,
+        tasks: [{ id: 'sec-2', title: 'Secondary filter write test' }],
+        preferences: { theme: 'light', filter: 'pending', sortBy: 'newest', category: 'all' }
+      };
+
+      const result = saveAppState(state);
+      assert.equal(result, false);
+
+      const err = getLastStorageError();
+      assert.ok(err);
+      assert.equal(err.key, STORAGE_KEYS.FILTER);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('saveTasks halts and returns false when primary TASKS write fails', () => {
+    let attemptedKeys = [];
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = (k) => {
+      attemptedKeys.push(k);
+      if (k === STORAGE_KEYS.TASKS) {
+        throw new Error('Tasks disk error');
+      }
+    };
+
+    try {
+      const result = saveTasks([{ id: 'st-fail-1', title: 'Halt on tasks fail' }]);
+      assert.equal(result, false);
+      assert.deepEqual(attemptedKeys, [STORAGE_KEYS.TASKS]);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
+  });
+
+  test('saveTasks returns false when secondary DATA write fails', () => {
+    const originalSetItem = stubStorage.setItem;
+    stubStorage.setItem = (k, v) => {
+      if (k === STORAGE_KEYS.DATA) {
+        throw new Error('Data disk error in saveTasks');
+      }
+      return originalSetItem.call(stubStorage, k, v);
+    };
+
+    try {
+      const result = saveTasks([{ id: 'st-fail-2', title: 'Fail on data sync' }]);
+      assert.equal(result, false);
+    } finally {
+      stubStorage.setItem = originalSetItem;
+    }
   });
 });

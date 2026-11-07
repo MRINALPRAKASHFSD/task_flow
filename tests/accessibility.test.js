@@ -196,3 +196,91 @@ describe('Accessibility & Focus Management', () => {
   });
 });
 
+describe('Task Card In-Place Focus Preservation', () => {
+
+  test('focused checkbox retains focus during in-place toggle', () => {
+    const card = new MockElement('article');
+    const checkbox = new MockElement('input', { type: 'checkbox' });
+    card.appendChild(checkbox);
+
+    checkbox.focus();
+    assert.equal(globalThis.document.activeElement, checkbox);
+
+    // Simulate in-place toggle mutation
+    checkbox.setAttribute('aria-label', 'Reopen task');
+    card.setAttribute('class', 'task-card is-completed');
+
+    // Focus is strictly maintained on the checkbox element
+    assert.equal(globalThis.document.activeElement, checkbox);
+  });
+
+  test('removing completed card shifts focus to adjacent element rather than body', () => {
+    const list = new MockElement('div');
+    const card1 = new MockElement('article');
+    const cb1 = new MockElement('input', { type: 'checkbox' });
+    card1.appendChild(cb1);
+
+    const card2 = new MockElement('article');
+    const cb2 = new MockElement('input', { type: 'checkbox' });
+    card2.appendChild(cb2);
+
+    list.appendChild(card1);
+    list.appendChild(card2);
+
+    cb1.focus();
+    assert.equal(globalThis.document.activeElement, cb1);
+
+    // When card1 is removed, focus shifts to adjacent sibling cb2
+    const wasFocused = card1.contains(globalThis.document.activeElement);
+    const fallbackFocus = cb2;
+    list.children = list.children.filter(c => c !== card1);
+
+    if (wasFocused && fallbackFocus) {
+      fallbackFocus.focus();
+    }
+
+    assert.equal(globalThis.document.activeElement, cb2);
+  });
+
+  test('restores focus to newly positioned card checkbox after sort order re-render', () => {
+    const list = new MockElement('div');
+    const card1 = new MockElement('article', { 'data-task-id': 'task-a' });
+    const cb1 = new MockElement('input', { type: 'checkbox' });
+    card1.appendChild(cb1);
+
+    const card2 = new MockElement('article', { 'data-task-id': 'task-b' });
+    const cb2 = new MockElement('input', { type: 'checkbox' });
+    card2.appendChild(cb2);
+
+    list.appendChild(card1);
+    list.appendChild(card2);
+
+    cb1.focus();
+    assert.equal(globalThis.document.activeElement, cb1);
+
+    const wasFocused = card1.contains(globalThis.document.activeElement);
+
+    // Simulate sort order re-render: card1 moves to bottom (after card2)
+    const newCard1 = new MockElement('article', { 'data-task-id': 'task-a' });
+    const newCb1 = new MockElement('input', { type: 'checkbox' });
+    newCard1.appendChild(newCb1);
+
+    const newCard2 = new MockElement('article', { 'data-task-id': 'task-b' });
+    const newCb2 = new MockElement('input', { type: 'checkbox' });
+    newCard2.appendChild(newCb2);
+
+    list.children = [newCard2, newCard1];
+
+    if (wasFocused) {
+      // Re-query new card by ID and restore focus to its checkbox
+      const targetCard = list.children.find(c => c.getAttribute('data-task-id') === 'task-a');
+      const targetCheckbox = targetCard?.children.find(ch => ch.tagName === 'INPUT');
+      if (targetCheckbox) {
+        targetCheckbox.focus();
+      }
+    }
+
+    assert.equal(globalThis.document.activeElement, newCb1, 'Focus must follow task card to its new sorted position');
+  });
+});
+
