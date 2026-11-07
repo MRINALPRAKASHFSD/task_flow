@@ -631,6 +631,8 @@ describe('Task Status Transitions & Recurrence Integration', () => {
     // Clear completed with failed persistence
     const completedCount = tasks.filter(t => t.completed || t.status === 'completed').length;
     tasks = tasks.filter(t => !t.completed && t.status !== 'completed');
+    assert.equal(tasks.length, 1, 'Clear-completed should remove completed tasks from in-memory state');
+    assert.equal(tasks[0].completed || tasks[0].status === 'completed', false, 'Remaining task must be incomplete');
 
     let persistSuccess = false; // quota failure
 
