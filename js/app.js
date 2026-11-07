@@ -1163,7 +1163,6 @@ function updateTaskListAfterToggle(taskId, nextTaskToInsert = null) {
     return;
   }
 
-  const now = new Date();
 
   // Evaluate whether the toggled task still qualifies for display under current filter settings
   const matchesFilter = applyFilters([updatedTask], {
@@ -1172,7 +1171,7 @@ function updateTaskListAfterToggle(taskId, nextTaskToInsert = null) {
     tag:      state.tagFilter,
     search:   state.search,
     sortBy:   state.sortBy,
-  }, now).length > 0;
+  }).length > 0;
 
   if (matchesFilter) {
     // Check if active sort order depends on completion status or update timestamp
