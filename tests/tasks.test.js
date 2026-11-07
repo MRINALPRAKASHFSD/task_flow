@@ -633,18 +633,12 @@ describe('Task Status Transitions & Recurrence Integration', () => {
     tasks = tasks.filter(t => !t.completed && t.status !== 'completed');
 
     let persistSuccess = false; // quota failure
-    if (persistSuccess) {
-      mockShowToast(`Cleared ${completedCount} completed task(s).`, 'success');
-    }
 
     assert.equal(notifications.length, 0, 'Must not claim completed tasks were cleared when persistence failed');
 
     // Reset all with failed persistence
     tasks = [];
     persistSuccess = false;
-    if (persistSuccess) {
-      mockShowToast('All tasks have been reset.', 'info');
-    }
 
     assert.equal(notifications.length, 0, 'Must not claim all tasks were reset when persistence failed');
   });
