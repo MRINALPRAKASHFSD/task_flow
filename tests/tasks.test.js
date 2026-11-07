@@ -639,7 +639,6 @@ describe('Task Status Transitions & Recurrence Integration', () => {
     assert.equal(notifications.length, 0, 'Must not claim completed tasks were cleared when persistence failed');
 
     // Reset all with failed persistence
-    persistSuccess = false;
 
     assert.equal(notifications.length, 0, 'Must not claim all tasks were reset when persistence failed');
   });
