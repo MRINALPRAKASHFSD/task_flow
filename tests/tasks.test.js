@@ -619,9 +619,6 @@ describe('Task Status Transitions & Recurrence Integration', () => {
 
   test('clear-completed and reset-all operations suppress success message on persistence failure', () => {
     let notifications = [];
-    const mockShowToast = (msg, type) => {
-      notifications.push({ msg, type });
-    };
 
     let tasks = [
       createTask({ title: 'T1' }),
