@@ -8,25 +8,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="TaskFlow — Plan smarter. Stay organized. Get things done. A modern, lightweight productivity dashboard." />
+  <meta name="description" content="TaskFlow — Plan • Organize • Execute. A modern, lightweight productivity dashboard." />
   <meta name="author" content="Mrinal Prakash" />
-  <meta name="theme-color" content="#4f46e5" />
+  <meta name="theme-color" content="#050F18" />
   <meta name="color-scheme" content="light dark" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="TaskFlow — Plan smarter. Stay organized." />
-  <meta property="og:description" content="A modern, dependency-free to-do manager with priority levels, categories, due dates, and themes." />
+  <meta property="og:title" content="TaskFlow — Plan • Organize • Execute" />
+  <meta property="og:description" content="Plan • Organize • Execute. A modern, dependency-free productivity manager with priority levels, categories, calendar, and analytics." />
+  <meta property="og:image" content="assets/icons/taskflow-logo-full.png" />
   <meta property="og:type" content="website" />
 
-  <title>TaskFlow — Plan smarter. Stay organized. Get things done.</title>
+  <title>TaskFlow — Plan • Organize • Execute</title>
+
+  <!-- Plus Jakarta Sans — single preconnect + preload for critical weight -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+  />
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/responsive.css" />
 
-  <!-- Favicon (inline SVG data URI) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M8 10h16M8 16h10M8 22h12' stroke='white' stroke-width='2.5' stroke-linecap='round'/></svg>" />
+  <!-- Favicons & Brand Assets -->
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
 
@@ -60,15 +73,17 @@
 
         <a href="#" class="header-brand" aria-label="TaskFlow home">
           <div class="header-brand__logo" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-              <path d="M2 17l10 5 10-5"></path>
-              <path d="M2 12l10 5 10-5"></path>
-            </svg>
+            <img
+              src="assets/icons/taskflow-logo-icon.png"
+              alt=""
+              width="36"
+              height="36"
+              class="brand-icon-img"
+            />
           </div>
-          <div>
-            <div class="header-brand__name">TaskFlow</div>
-            <div class="header-brand__tagline">Plan smarter. Stay organized.</div>
+          <div class="header-brand__content">
+            <div class="header-brand__name"><span class="brand-text-task">Task</span><span class="brand-text-flow">Flow</span></div>
+            <div class="header-brand__tagline">Plan • Organize • Execute</div>
           </div>
         </a>
       </div>
@@ -101,6 +116,27 @@
           <span>New Task</span>
         </button>
 
+        <!-- Notifications Entry Point -->
+        <div class="header-notifications-wrapper">
+          <button
+            id="btn-header-notifications"
+            class="header-notifications-btn"
+            type="button"
+            aria-label="Notifications"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="notification-center-panel"
+            title="Notifications"
+          >
+            <svg class="tf-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span id="notification-badge" class="notification-badge is-hidden" aria-hidden="true">0</span>
+            <span class="sr-only" id="notification-badge-sr" aria-live="polite" aria-atomic="true">0 unread notifications</span>
+          </button>
+        </div>
+
         <button
           id="theme-toggle"
           class="theme-toggle"
@@ -127,6 +163,17 @@
          ==================================================== -->
     <aside id="app-sidebar" class="app-sidebar" aria-label="Main Navigation">
       <nav class="sidebar-nav-container">
+
+        <!-- Sidebar Brand (Mobile Drawer) -->
+        <div class="sidebar-brand" aria-hidden="true">
+          <div class="sidebar-brand__logo">
+            <img src="assets/icons/taskflow-logo-icon.png" alt="" width="32" height="32" class="brand-icon-img" />
+          </div>
+          <div class="sidebar-brand__content">
+            <div class="sidebar-brand__name"><span class="brand-text-task">Task</span><span class="brand-text-flow">Flow</span></div>
+            <div class="sidebar-brand__tagline">Plan • Organize • Execute</div>
+          </div>
+        </div>
 
         <!-- App Menu Section -->
         <div class="sidebar-section">
@@ -487,7 +534,7 @@
             <h1 id="welcome-greeting" class="section-title">Good day</h1>
             <p id="welcome-date" class="welcome-date text-muted">Loading date…</p>
           </div>
-          <p id="welcome-subtitle" class="section-subtitle">Plan smarter. Stay organized. Get things done.</p>
+          <p id="welcome-subtitle" class="section-subtitle">Plan • Organize • Execute</p>
         </header>
 
         <!-- ====================================================
@@ -849,8 +896,19 @@
             <div class="analytics-grid">
               <div class="analytics-card analytics-card--trend">
                 <div class="analytics-card__header">
-                  <h3 class="analytics-card__title">Daily Completion Trend</h3>
-                  <span class="text-sm text-muted">Completed vs Active</span>
+                  <div>
+                    <h3 class="analytics-card__title">Task Activity Trends</h3>
+                    <span class="text-xs text-muted">Completed activity vs tasks created (recent recorded activity)</span>
+                  </div>
+                  <div class="analytics-trend-granularity filter-tabs" role="group" aria-label="Trend granularity">
+                    <button type="button" class="filter-tab is-active" data-granularity="day" aria-pressed="true">Daily</button>
+                    <button type="button" class="filter-tab" data-granularity="week" aria-pressed="false">Weekly</button>
+                    <button type="button" class="filter-tab" data-granularity="month" aria-pressed="false">Monthly</button>
+                  </div>
+                </div>
+                <div class="analytics-chart-legend" aria-hidden="true">
+                  <span class="legend-item"><span class="legend-dot legend-dot--completed"></span> Completed Activity</span>
+                  <span class="legend-item"><span class="legend-dot legend-dot--created"></span> Tasks Created</span>
                 </div>
                 <div id="analytics-trend-chart-container" class="analytics-chart-container"></div>
               </div>
@@ -868,15 +926,20 @@
               <div class="analytics-card">
                 <div class="analytics-card__header">
                   <h3 class="analytics-card__title">Category Performance</h3>
+                  <span class="text-xs text-muted">Completed vs pending breakdown</span>
                 </div>
                 <div id="analytics-category-container" class="analytics-breakdown-list"></div>
               </div>
 
               <div class="analytics-card">
                 <div class="analytics-card__header">
-                  <h3 class="analytics-card__title">Priority Distribution</h3>
+                  <h3 class="analytics-card__title">Priority &amp; Workload</h3>
                 </div>
                 <div id="analytics-priority-container" class="analytics-breakdown-list"></div>
+                <div class="analytics-workload-horizon">
+                  <h4 class="analytics-subheading">Scheduled Workload Horizon</h4>
+                  <div id="analytics-horizon-container" class="analytics-horizon-grid"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -886,6 +949,117 @@
     </main>
 
   </div><!-- /.app-layout -->
+
+
+  <!-- ====================================================
+       NOTIFICATION CENTER PANEL & MOBILE BACKDROP
+       ==================================================== -->
+  <div id="notification-center-backdrop" class="notification-backdrop is-hidden" aria-hidden="true"></div>
+  <aside
+    id="notification-center-panel"
+    class="notification-panel is-hidden"
+    role="dialog"
+    aria-modal="false"
+    aria-hidden="true"
+    aria-labelledby="notification-panel-title"
+    tabindex="-1"
+  >
+    <!-- Drawer handle for mobile -->
+    <div class="notification-drawer-handle" aria-hidden="true"></div>
+
+    <!-- Panel Header -->
+    <div class="notification-panel__header">
+      <div class="notification-panel__title-group">
+        <h2 id="notification-panel-title" class="notification-panel__title">Notifications</h2>
+        <span id="notification-unread-count-pill" class="notification-count-pill is-hidden">0 unread</span>
+      </div>
+      <div class="notification-panel__header-actions">
+        <button
+          id="btn-notifications-mark-all-read"
+          class="btn-text-action"
+          type="button"
+          aria-label="Mark all notifications as read"
+        >
+          Mark all as read
+        </button>
+        <button
+          id="btn-notification-close"
+          class="notification-close-btn"
+          type="button"
+          aria-label="Close notification panel"
+        >
+          <svg class="tf-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="notification-filter-tabs" role="tablist" aria-label="Filter notifications">
+      <button
+        id="notification-tab-all"
+        type="button"
+        class="notification-tab is-active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="notification-list-container"
+        tabindex="0"
+        data-notification-filter="all"
+      >
+        All
+      </button>
+      <button
+        id="notification-tab-unread"
+        type="button"
+        class="notification-tab"
+        role="tab"
+        aria-selected="false"
+        aria-controls="notification-list-container"
+        tabindex="-1"
+        data-notification-filter="unread"
+      >
+        Unread
+      </button>
+      <button
+        id="notification-tab-intelligence"
+        type="button"
+        class="notification-tab"
+        role="tab"
+        aria-selected="false"
+        aria-controls="notification-list-container"
+        tabindex="-1"
+        data-notification-filter="intelligence"
+      >
+        Intelligence
+      </button>
+    </div>
+
+    <!-- Scrollable Notification List -->
+    <div
+      id="notification-list-container"
+      class="notification-list-container"
+      role="tabpanel"
+      aria-labelledby="notification-tab-all"
+      tabindex="0"
+      aria-live="polite"
+    >
+      <!-- Dynamically rendered notification groups and items -->
+    </div>
+
+    <!-- Panel Footer -->
+    <div class="notification-panel__footer">
+      <button
+        id="btn-notifications-clear-all"
+        class="btn-text-action btn-text-action--danger"
+        type="button"
+        aria-label="Clear all notifications"
+      >
+        Clear all
+      </button>
+    </div>
+  </aside>
 
 
   <!-- ====================================================
@@ -1318,6 +1492,44 @@
               </select>
             </div>
           </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-daily-briefing" class="settings-label">Daily Productivity Briefing</label>
+              <p class="text-xs text-muted">Receive a morning briefing at 09:00 summarizing today's tasks and overdue items.</p>
+            </div>
+            <input type="checkbox" id="setting-daily-briefing" class="form-checkbox" checked />
+          </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-priority-filter" class="settings-label">Priority Alert Filter</label>
+              <p class="text-xs text-muted">Select which task priorities trigger due-soon and overdue alerts.</p>
+            </div>
+            <div class="select-wrapper select-wrapper--compact">
+              <select id="setting-priority-filter" class="form-select toolbar-select" aria-label="Priority alert filter">
+                <option value="all" selected>All Priorities</option>
+                <option value="medium_high">Medium &amp; High Only</option>
+                <option value="high_only">High Priority Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-field-row">
+            <div>
+              <label for="setting-quiet-hours-enabled" class="settings-label">Quiet Hours</label>
+              <p class="text-xs text-muted">Suppress notification toasts and desktop alerts during your rest period.</p>
+            </div>
+            <input type="checkbox" id="setting-quiet-hours-enabled" class="form-checkbox" />
+          </div>
+          <div id="settings-quiet-hours-range" class="settings-field-row is-hidden">
+            <div>
+              <label class="settings-label">Quiet Hours Range</label>
+              <p class="text-xs text-muted">Start and end local time for notification suppression.</p>
+            </div>
+            <div class="settings-control-row">
+              <input type="time" id="setting-quiet-hours-start" class="form-input form-input--compact" value="22:00" aria-label="Quiet hours start time" />
+              <span class="text-xs text-muted" aria-hidden="true">to</span>
+              <input type="time" id="setting-quiet-hours-end" class="form-input form-input--compact" value="08:00" aria-label="Quiet hours end time" />
+            </div>
+          </div>
         </div>
         <div class="settings-group">
           <div class="settings-group__header">
@@ -1384,7 +1596,14 @@
           <div class="settings-info-card">
             <div class="settings-info-row">
               <span class="settings-info-label">Application</span>
-              <span class="settings-info-value">TaskFlow v1.0.0</span>
+              <span class="settings-info-value settings-info-value--brand">
+                <img src="assets/icons/taskflow-logo-icon.png" alt="" width="18" height="18" class="settings-brand-icon" />
+                <span>TaskFlow v1.0.0</span>
+              </span>
+            </div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">Tagline</span>
+              <span class="settings-info-value">PLAN • ORGANIZE • EXECUTE</span>
             </div>
             <div class="settings-info-row">
               <span class="settings-info-label">Author</span>
