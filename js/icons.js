@@ -218,6 +218,13 @@ export function createToastCloseIcon(size = 14, className = '') {
   return svg;
 }
 
+export function createBellIcon(size = 18, className = '') {
+  const svg = createSvg(size, size, '0 0 24 24', className);
+  appendPath(svg, 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9');
+  appendPath(svg, 'M13.73 21a2 2 0 0 1-3.46 0');
+  return svg;
+}
+
 export function createEmptyClipboardIcon(size = 48, className = '') {
   const svg = createSvg(size, size, '0 0 24 24', className);
   appendPath(svg, 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2');
