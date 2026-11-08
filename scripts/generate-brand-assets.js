@@ -54,7 +54,6 @@ function decodePNG(fileBuffer) {
   let pos = 8;
   let width = 0;
   let height = 0;
-  let bitDepth;
   let colorType = 6;
   const idatChunks = [];
 
@@ -64,7 +63,10 @@ function decodePNG(fileBuffer) {
     if (type === 'IHDR') {
       width = fileBuffer.readUInt32BE(pos + 8);
       height = fileBuffer.readUInt32BE(pos + 12);
-      bitDepth = fileBuffer[pos + 16];
+      const bitDepth = fileBuffer[pos + 16];
+      if (bitDepth !== 8) {
+        throw new Error(`Unsupported PNG bit depth: ${bitDepth}. Expected 8.`);
+      }
       colorType = fileBuffer[pos + 17];
     } else if (type === 'IDAT') {
       idatChunks.push(fileBuffer.slice(pos + 8, pos + 8 + len));
