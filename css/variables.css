@@ -10,15 +10,19 @@
    ROOT / LIGHT THEME (Default)
    ============================================================ */
 :root {
-  /* --- Brand Identity --- */
-  --color-primary:          #4f46e5;       /* Modern Indigo */
-  --color-primary-hover:    #4338ca;
-  --color-primary-active:   #3730a3;
-  --color-primary-subtle:   #eef2ff;
-  --color-primary-border:   #c7d2fe;
-  --color-primary-glow:     rgba(79, 70, 229, 0.18);
-  --gradient-brand:         linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  --gradient-brand-subtle:  linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  /* --- Brand Identity (Teal) --- */
+  /* #0F766E (Teal 700): 5.47:1 on white — WCAG AA for normal text & btn label */
+  --color-primary:          #0F766E;       /* Teal 700 — AA-compliant on white/surfaces */
+  --color-primary-hover:    #115E59;       /* Teal 800 */
+  --color-primary-active:   #0D4F4A;       /* Teal 850 */
+  --color-primary-subtle:   #F0FDFA;       /* Teal 50 */
+  --color-primary-border:   #99F6E4;       /* Teal 200 */
+  --color-primary-glow:     rgba(15, 118, 110, 0.18);
+  --gradient-brand:         linear-gradient(135deg, #0F766E 0%, #115E59 100%);
+  --gradient-brand-subtle:  linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);
+  /* --- Accent (orange — restrained emphasis only) --- */
+  --color-accent:           #EA580C;       /* Orange 600 */
+  --color-accent-hover:     #C2410C;       /* Orange 700 */
 
   /* --- Semantic Accents --- */
   --color-success:          #10b981;
@@ -38,6 +42,7 @@
   --color-danger-subtle:    #fef2f2;
   --color-danger-border:    #fecaca;
   --color-danger-text:      #991b1b;
+  --color-danger-solid-bg:  #dc2626;
 
   --color-info:             #0ea5e9;
   --color-info-hover:       #0284c7;
@@ -98,6 +103,7 @@
   --color-surface-hover:        #f8fafc;
   --color-surface-active:       #f1f5f9;
   --color-surface-alt:          #f1f5f9;       /* Inset / secondary controls */
+  --color-bg-secondary:         var(--color-surface-alt);
   --color-surface-elevated:     #ffffff;       /* Modals & menus */
   --color-surface-glass:        rgba(255, 255, 255, 0.85);
 
@@ -105,8 +111,8 @@
   --color-border:               #e2e8f0;
   --color-border-subtle:        #f1f5f9;
   --color-border-hover:         #cbd5e1;
-  --color-border-focus:         #4f46e5;
-  --ring-focus:                 0 0 0 3px rgba(79, 70, 229, 0.2);
+  --color-border-focus:         #0F766E;
+  --ring-focus:                 0 0 0 3px rgba(15, 118, 110, 0.2);
 
   /* --- Typography & Text (Light) --- */
   --color-text-primary:         #0f172a;       /* Slate 900 */
@@ -122,6 +128,7 @@
   --shadow-md:    0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg:    0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
   --shadow-xl:    0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+  --shadow-2xl:   0 25px 50px -12px rgba(15, 23, 42, 0.25);
   --shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   --shadow-card-hover: 0 10px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
 
@@ -132,16 +139,18 @@
   --space-2:   0.5rem;   /* 8px */
   --space-2-5: 0.625rem; /* 10px */
   --space-3:   0.75rem;  /* 12px */
+  --space-3-5: 0.875rem; /* 14px */
   --space-4:   1rem;     /* 16px */
   --space-5:   1.25rem;  /* 20px */
   --space-6:   1.5rem;   /* 24px */
+  --space-7:   1.75rem;  /* 28px */
   --space-8:   2rem;     /* 32px */
   --space-10:  2.5rem;   /* 40px */
   --space-12:  3rem;     /* 48px */
   --space-16:  4rem;     /* 64px */
 
   /* --- Typography Scale & Hierarchy --- */
-  --font-family-base:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  --font-family-base:   "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-family-mono:   ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   --font-size-2xs:  0.6875rem; /* 11px */
@@ -185,6 +194,7 @@
   --ease-in-out:      cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast:   150ms var(--ease-out);
   --transition-base:   220ms var(--ease-out);
+  --transition-normal: var(--transition-base);
   --transition-slow:   320ms var(--ease-out);
 
   /* --- Layout Geometries --- */
@@ -212,6 +222,7 @@
   --color-surface-hover:        #182234;
   --color-surface-active:       #1f293d;
   --color-surface-alt:          #162032;
+  --color-bg-secondary:         var(--color-surface-alt);
   --color-surface-elevated:     #172033;
   --color-surface-glass:        rgba(17, 24, 39, 0.88);
 
@@ -219,24 +230,28 @@
   --color-border:               #1f293d;
   --color-border-subtle:        #162032;
   --color-border-hover:         #2d3b55;
-  --color-border-focus:         #818cf8;
-  --ring-focus:                 0 0 0 3px rgba(129, 140, 248, 0.25);
+  --color-border-focus:         #2DD4BF;
+  --ring-focus:                 0 0 0 3px rgba(45, 212, 191, 0.25);
 
   /* --- Typography & Text (Dark) --- */
   --color-text-primary:         #f8fafc;       /* Crisp White-Slate */
   --color-text-secondary:       #94a3b8;       /* Slate 400 */
-  --color-text-muted:           #64748b;       /* Slate 500 */
+  --color-text-muted:           #7a8fa6;       /* Blue-slate 400+ — 5.33:1 on #111827, WCAG AA */
   --color-text-tertiary:        #475569;       /* Slate 600 */
 
   /* --- Brand Overrides (Dark) --- */
-  --color-primary:              #6366f1;       /* Electric Iris */
-  --color-primary-hover:        #818cf8;
-  --color-primary-active:       #4f46e5;
-  --color-primary-subtle:       rgba(99, 102, 241, 0.12);
-  --color-primary-border:       rgba(99, 102, 241, 0.3);
-  --color-primary-glow:         rgba(99, 102, 241, 0.3);
-  --gradient-brand:             linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  --gradient-brand-subtle:      linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.14) 100%);
+  /* Links/nav text: #2DD4BF (Teal 300) on dark surfaces — 9–10:1 AAA        */
+  /* Button bg: #0F766E→#115E59 gradient — white text 5.47:1/7.58:1 AA/AAA  */
+  --color-primary:              #2DD4BF;       /* Teal 300 — text/links on dark */
+  --color-primary-hover:        #5EEAD4;       /* Teal 200 */
+  --color-primary-active:       #0D9488;       /* Teal 600 */
+  --color-primary-subtle:       rgba(13, 148, 136, 0.14);
+  --color-primary-border:       rgba(45, 212, 191, 0.3);
+  --color-primary-glow:         rgba(45, 212, 191, 0.3);
+  --gradient-brand:             linear-gradient(135deg, #0F766E 0%, #115E59 100%);
+  --gradient-brand-subtle:      linear-gradient(135deg, rgba(15, 118, 110, 0.16) 0%, rgba(17, 94, 89, 0.16) 100%);
+  --color-accent:               #FB923C;       /* Orange 400 — luminous on dark */
+  --color-accent-hover:         #FDBA74;       /* Orange 300 */
 
   /* --- Semantic Accents (Dark) --- */
   --color-success:              #34d399;
@@ -316,6 +331,7 @@
   --shadow-md:    0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
   --shadow-lg:    0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
   --shadow-xl:    0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+  --shadow-2xl:   0 25px 50px -12px rgba(0, 0, 0, 0.85);
   --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--color-border);
   --shadow-card-hover: 0 12px 24px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--color-primary-border);
 }
