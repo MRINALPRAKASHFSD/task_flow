@@ -34,7 +34,7 @@ import {
 } from '../js/calendar.js';
 
 import { createTask, toggleTaskStatus } from '../js/tasks.js';
-import { parseLocalDate, isValidDateString } from '../js/utils.js';
+import { parseLocalDate } from '../js/utils.js';
 
 describe('Calendar Constants & Date Formatting', () => {
   test('constants contain 7 days and 12 months', () => {
