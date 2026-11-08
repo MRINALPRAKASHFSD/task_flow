@@ -1456,7 +1456,7 @@ describe('NotificationCenterUI — Notification Interactions', () => {
     let confirmPromptShown = false;
     let confirmChoice = false;
 
-    const ui = new NotificationCenterUI({
+    new NotificationCenterUI({
       notificationCenter: center,
       confirmFn: (msg) => {
         confirmPromptShown = true;
