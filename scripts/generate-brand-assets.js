@@ -74,7 +74,6 @@ function decodePNG(fileBuffer) {
 
   const raw = zlib.inflateSync(Buffer.concat(idatChunks));
   const bpp = colorType === 6 ? 4 : 3;
-  const stride = width * 4;
   const pixels = Buffer.alloc(width * height * 4);
 
   function paeth(a, b, c) {
