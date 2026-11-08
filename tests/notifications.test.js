@@ -1374,7 +1374,7 @@ describe('NotificationCenterUI — Notification Interactions', () => {
     const center = new NotificationCenter(storage);
     const dom = createMockNotificationUIElements();
 
-    const notif = center.addNotification({
+    center.addNotification({
       type: 'due_soon',
       title: 'Urgent Task',
       message: 'Due shortly',
