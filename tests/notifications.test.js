@@ -1406,7 +1406,7 @@ describe('NotificationCenterUI — Notification Interactions', () => {
     center.addNotification({ type: 'due_soon', title: 'Task 1', message: 'Msg 1' });
     center.addNotification({ type: 'due_soon', title: 'Task 2', message: 'Msg 2' });
 
-    const ui = new NotificationCenterUI({
+    new NotificationCenterUI({
       notificationCenter: center,
       ...dom,
     });
