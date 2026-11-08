@@ -718,7 +718,7 @@ describe('NotificationCenter — CRUD Operations & Read State', () => {
 
   test('markAsRead updates target notification, decrements unread count, and returns boolean', () => {
     const n1 = center.addNotification({ type: 'due_soon', title: 'T1', message: 'M1' });
-    const n2 = center.addNotification({ type: 'due_soon', title: 'T2', message: 'M2' });
+    center.addNotification({ type: 'due_soon', title: 'T2', message: 'M2' });
     assert.equal(center.getUnreadCount(), 2);
 
     const marked = center.markAsRead(n1.id);
