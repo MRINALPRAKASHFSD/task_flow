@@ -59,3 +59,11 @@ playwright-report/
 *.key
 *.cert
 *.p12
+
+# Agent & local design system tooling
+.agents/
+AGENTS.md
+design-system/
+__pycache__/
+*.py[cod]
+
