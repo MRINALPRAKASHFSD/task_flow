@@ -54,7 +54,7 @@ function decodePNG(fileBuffer) {
   let pos = 8;
   let width = 0;
   let height = 0;
-  let bitDepth = 8;
+  let bitDepth;
   let colorType = 6;
   const idatChunks = [];
 
