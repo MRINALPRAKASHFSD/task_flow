@@ -35,6 +35,7 @@ import {
 
 import { filterByStatus } from '../js/filters.js';
 import { completeRecurringTask } from '../js/recurrence.js';
+import { formatDate, formatTaskActivity } from '../js/utils.js';
 
 // ─── createTask ─────────────────────────────────────────────────────────────
 
@@ -637,3 +638,162 @@ describe('Task Status Transitions & Recurrence Integration', () => {
     assert.equal(notifications.length, 0, 'Must not claim all tasks were reset when persistence failed');
   });
 });
+
+// ─── Activity Timestamps & Relative Formatting ────────────────────────────────
+
+describe('Activity Timestamps & Relative Formatting', () => {
+  const refTime = new Date('2026-11-07T12:00:00.000Z');
+
+  test('formats "Created just now" for recently created task (within 60s)', () => {
+    const createdDate = new Date(refTime.getTime() - 30 * 1000).toISOString();
+    const task = {
+      title: 'Quick Task',
+      createdAt: createdDate,
+      updatedAt: createdDate,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    assert.equal(activity.isUpdated, false);
+    assert.equal(activity.label, 'Created just now');
+    assert.equal(activity.datetime, createdDate);
+    assert.ok(activity.tooltip.startsWith('Created:'));
+    assert.ok(activity.tooltip.includes(new Date(createdDate).toLocaleString()));
+  });
+
+  test('formats "Created yesterday" for task created 24-48 hours ago', () => {
+    const createdDate = new Date(refTime.getTime() - 30 * 3600 * 1000).toISOString();
+    const task = {
+      title: 'Yesterday Task',
+      createdAt: createdDate,
+      updatedAt: createdDate,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    assert.equal(activity.isUpdated, false);
+    assert.equal(activity.label, 'Created yesterday');
+    assert.equal(activity.datetime, createdDate);
+    assert.ok(activity.tooltip.startsWith('Created:'));
+    assert.ok(activity.tooltip.includes(new Date(createdDate).toLocaleString()));
+  });
+
+  test('formats "Updated" with relative time when task has been modified', () => {
+    const createdDate = new Date(refTime.getTime() - 48 * 3600 * 1000).toISOString();
+    const updatedDate = new Date(refTime.getTime() - 2 * 3600 * 1000).toISOString();
+    const task = {
+      title: 'Modified Task',
+      createdAt: createdDate,
+      updatedAt: updatedDate,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    assert.equal(activity.isUpdated, true);
+    assert.equal(activity.label, 'Updated 2h ago');
+    assert.equal(activity.datetime, updatedDate);
+    assert.ok(activity.tooltip.startsWith('Last modified:'));
+    assert.ok(activity.tooltip.includes(new Date(updatedDate).toLocaleString()));
+  });
+
+  test('formats "Updated just now" when modification is recent', () => {
+    const createdDate = new Date(refTime.getTime() - 24 * 3600 * 1000).toISOString();
+    const updatedDate = new Date(refTime.getTime() - 15 * 1000).toISOString();
+    const task = {
+      title: 'Freshly Modified Task',
+      createdAt: createdDate,
+      updatedAt: updatedDate,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    assert.equal(activity.isUpdated, true);
+    assert.equal(activity.label, 'Updated just now');
+    assert.ok(activity.tooltip.startsWith('Last modified:'));
+  });
+
+  test('formats "Updated yesterday" when modification was yesterday', () => {
+    const createdDate = new Date(refTime.getTime() - 72 * 3600 * 1000).toISOString();
+    const updatedDate = new Date(refTime.getTime() - 28 * 3600 * 1000).toISOString();
+    const task = {
+      title: 'Yesterday Modified Task',
+      createdAt: createdDate,
+      updatedAt: updatedDate,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    assert.equal(activity.isUpdated, true);
+    assert.equal(activity.label, 'Updated yesterday');
+    assert.ok(activity.tooltip.startsWith('Last modified:'));
+  });
+
+  test('full localized timestamp tooltip matches target date toLocaleString', () => {
+    const dateStr = '2026-11-06T15:30:00.000Z';
+    const task = {
+      title: 'Tooltip Task',
+      createdAt: dateStr,
+      updatedAt: dateStr,
+    };
+
+    const activity = formatTaskActivity(task, refTime);
+    const expectedLocal = new Date(dateStr).toLocaleString();
+    assert.equal(activity.tooltip, `Created: ${expectedLocal}`);
+  });
+
+  test('editing a task preserves its original creation timestamp', () => {
+    const fixedPast = '2026-01-01T08:00:00.000Z';
+    const original = {
+      ...createTask({ title: 'Original Task', priority: 'medium' }),
+      createdAt: fixedPast,
+      updatedAt: fixedPast,
+    };
+
+    const edited = updateTask(original, { title: 'Updated Task Name' });
+    assert.equal(edited.createdAt, fixedPast, 'createdAt must remain untouched');
+    assert.notEqual(edited.updatedAt, fixedPast, 'updatedAt must be refreshed');
+    assert.ok(new Date(edited.updatedAt).getTime() > new Date(fixedPast).getTime());
+  });
+
+  test('updating a task changes its update timestamp', () => {
+    const original = createTask({ title: 'Time change test' });
+    const originalUpdate = original.updatedAt;
+
+    const futureIso = new Date(Date.now() + 10000).toISOString();
+    const edited = {
+      ...updateTask(original, { description: 'New description' }),
+      updatedAt: futureIso,
+    };
+
+    assert.equal(edited.createdAt, original.createdAt);
+    assert.notEqual(edited.updatedAt, originalUpdate);
+    assert.ok(new Date(edited.updatedAt).getTime() > new Date(originalUpdate).getTime());
+  });
+
+  test('toggling task status updates updatedAt while preserving createdAt', () => {
+    const fixedPast = '2026-05-01T10:00:00.000Z';
+    const original = {
+      ...createTask({ title: 'Toggle test' }),
+      createdAt: fixedPast,
+      updatedAt: fixedPast,
+    };
+
+    const completed = toggleTaskStatus(original);
+    assert.equal(completed.createdAt, fixedPast, 'createdAt preserved on toggle');
+    assert.notEqual(completed.updatedAt, fixedPast, 'updatedAt modified on toggle');
+    assert.equal(completed.status, 'completed');
+
+    const reopened = toggleTaskStatus(completed);
+    assert.equal(reopened.createdAt, fixedPast, 'createdAt preserved on reopen');
+    assert.equal(reopened.status, 'pending');
+  });
+
+  test('formatDate correctly returns expected relative ranges deterministically', () => {
+    assert.equal(formatDate(new Date(refTime.getTime() - 10000).toISOString(), refTime), 'Just now');
+    assert.equal(formatDate(new Date(refTime.getTime() - 5 * 60 * 1000).toISOString(), refTime), '5m ago');
+    assert.equal(formatDate(new Date(refTime.getTime() - 3 * 3600 * 1000).toISOString(), refTime), '3h ago');
+    assert.equal(formatDate(new Date(refTime.getTime() - 25 * 3600 * 1000).toISOString(), refTime), 'Yesterday');
+    assert.equal(formatDate(new Date(refTime.getTime() - 4 * 86400 * 1000).toISOString(), refTime), '4d ago');
+    const farPast = new Date(refTime.getTime() - 14 * 86400 * 1000).toISOString();
+    const expectedAbs = new Date(farPast).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    assert.equal(formatDate(farPast, refTime), expectedAbs);
+    assert.equal(formatDate(''), '');
+    assert.equal(formatDate('not-a-date'), '');
+  });
+});
+

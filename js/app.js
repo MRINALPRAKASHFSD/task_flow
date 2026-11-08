@@ -51,10 +51,12 @@ import {
   filterByTag,
   groupTasks,
   GROUP_BY_OPTIONS,
+  countTasksByCategory,
 } from './filters.js';
 
 import {
   DAYS_OF_WEEK,
+  DAYS_OF_WEEK_FULL,
   MONTH_NAMES,
   SHORT_MONTH_NAMES,
   formatCalendarDate,
@@ -63,6 +65,10 @@ import {
   getTasksForDate,
   getDayTaskSummary,
   navigateDay,
+  navigateWeek,
+  navigateMonth,
+  getDaysInMonth,
+  formatWeekTitle,
   getDayAgenda,
 } from './calendar.js';
 
@@ -72,11 +78,16 @@ import {
 } from './recurrence.js';
 
 import {
+  TIME_FRAMES,
   filterTasksByTimeFrame,
   computeProductivityOverview,
   computeDailyCompletionTrends,
+  computeWeeklyCompletionTrends,
+  computeMonthlyCompletionTrends,
   computeCategoryAnalytics,
   computePriorityAnalytics,
+  computePriorityWorkload,
+  computeWorkloadTimeline,
   computeProductivityInsights,
   generateTrendChartSVG,
 } from './analytics.js';
@@ -87,6 +98,13 @@ import {
   loadReminderPreferences,
   saveReminderPreferences,
   isDueSoon,
+  isQuietHours,
+  generateDailyBriefing,
+  isSchedulerRunning,
+  startReminderScheduler,
+  stopReminderScheduler,
+  pruneNotifiedReminders,
+  STORAGE_KEY_REMINDER_PREFS,
 } from './reminders.js';
 
 import {
@@ -96,6 +114,8 @@ import {
 
 import {
   ToastManager,
+  NotificationCenter,
+  NotificationCenterUI,
   TOAST_LIMIT,
   TOAST_DURATIONS,
 } from './notifications.js';
@@ -104,10 +124,12 @@ import {
   debounce,
   setText,
   formatDate,
+  formatTaskActivity,
   formatDueDate,
   formatHeaderDate,
   getGreeting,
   trapFocus,
+  parseLocalDate,
 } from './utils.js';
 
 import {
@@ -158,7 +180,8 @@ const state = {
 
   // Analytics State
   analytics: {
-    timeFrame: '7d',         // '7d' | '30d' | '90d' | 'all'
+    timeFrame:   '7d',       // '7d' | '30d' | '90d' | 'all'
+    granularity: 'day',      // 'day' | 'week' | 'month'
   },
 
   // Subtasks buffer for task modal
@@ -166,6 +189,12 @@ const state = {
 
   // Smart Reminder preferences
   reminderPreferences: loadReminderPreferences(),
+
+  // Persistent Notification Center Engine
+  notificationCenter: new NotificationCenter(),
+
+  // Notification Center UI Controller
+  notificationCenterUI: null,
 };
 
 // ─── DOM Elements Cache ───────────────────────────────────────────────────────
@@ -174,11 +203,22 @@ const $ = (id) => document.getElementById(id);
 
 const dom = {
   // Header
-  themeToggle:        $('theme-toggle'),
-  themeIcon:          $('theme-icon'),
-  btnHeaderAdd:       $('btn-header-add'),
-  btnHeaderPalette:   $('btn-header-palette'),
-  btnMobileNav:       $('btn-mobile-nav'),
+  themeToggle:                $('theme-toggle'),
+  themeIcon:                  $('theme-icon'),
+  btnHeaderAdd:               $('btn-header-add'),
+  btnHeaderPalette:           $('btn-header-palette'),
+  btnHeaderNotifications:     $('btn-header-notifications'),
+  notificationBadge:          $('notification-badge'),
+  notificationBadgeSr:        $('notification-badge-sr'),
+  notificationCenterPanel:    $('notification-center-panel'),
+  notificationCenterBackdrop: $('notification-center-backdrop'),
+  notificationListContainer:  $('notification-list-container'),
+  notificationUnreadCountPill:$('notification-unread-count-pill'),
+  notificationFilterTabs:     document.querySelectorAll('.notification-filter-tabs button'),
+  btnNotificationsMarkAllRead:$('btn-notifications-mark-all-read'),
+  btnNotificationsClearAll:   $('btn-notifications-clear-all'),
+  btnNotificationClose:       $('btn-notification-close'),
+  btnMobileNav:               $('btn-mobile-nav'),
 
   // Navigation Links & Views
   navBtnTasks:        $('nav-btn-tasks'),
@@ -254,17 +294,19 @@ const dom = {
   calDayDetailTasks:  $('cal-day-detail-tasks'),
 
   // Analytics DOM
-  analyticsTimeframeTabs: document.querySelectorAll('.analytics-timeframe-tabs button'),
-  analyticsStatTotal:     $('analytics-stat-total'),
-  analyticsStatCompleted: $('analytics-stat-completed'),
-  analyticsStatPending:   $('analytics-stat-pending'),
-  analyticsStatOverdue:   $('analytics-stat-overdue'),
-  analyticsStatRate:      $('analytics-stat-rate'),
-  analyticsStatAvgPerDay: $('analytics-stat-avg-per-day'),
+  analyticsTimeframeTabs:   document.querySelectorAll('.analytics-timeframe-tabs button'),
+  analyticsGranularityTabs: document.querySelectorAll('.analytics-trend-granularity button'),
+  analyticsStatTotal:       $('analytics-stat-total'),
+  analyticsStatCompleted:   $('analytics-stat-completed'),
+  analyticsStatPending:     $('analytics-stat-pending'),
+  analyticsStatOverdue:     $('analytics-stat-overdue'),
+  analyticsStatRate:        $('analytics-stat-rate'),
+  analyticsStatAvgPerDay:   $('analytics-stat-avg-per-day'),
   analyticsTrendChartContainer: $('analytics-trend-chart-container'),
   analyticsInsightsContainer:   $('analytics-insights-container'),
   analyticsCategoryContainer:   $('analytics-category-container'),
   analyticsPriorityContainer:   $('analytics-priority-container'),
+  analyticsHorizonContainer:    $('analytics-horizon-container'),
 
   // Task Modal dialog
   modalOverlay:       $('modal-overlay'),
@@ -316,6 +358,12 @@ const dom = {
   btnRequestNotificationPerm:  $('btn-request-notification-perm'),
   settingInappAlerts:          $('setting-inapp-alerts'),
   settingDueSoonHours:         $('setting-due-soon-hours'),
+  settingDailyBriefing:        $('setting-daily-briefing'),
+  settingPriorityFilter:       $('setting-priority-filter'),
+  settingQuietHoursEnabled:    $('setting-quiet-hours-enabled'),
+  settingsQuietHoursRange:     $('settings-quiet-hours-range'),
+  settingQuietHoursStart:      $('setting-quiet-hours-start'),
+  settingQuietHoursEnd:        $('setting-quiet-hours-end'),
 
   // Command Palette DOM
   paletteOverlay:     $('palette-overlay'),
@@ -588,6 +636,7 @@ function toggleTheme() {
   applyTheme(state.theme);
   saveTheme(state.theme);
   const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
   if (saved) {
     showToast(state.theme === 'dark' ? 'Dark theme enabled.' : 'Light theme enabled.', 'info');
   }
@@ -732,13 +781,31 @@ function openSettings() {
 
   // Sync reminder preferences
   if (dom.settingBrowserNotifications) {
-    dom.settingBrowserNotifications.checked = state.reminderPreferences.browserNotifications;
+    dom.settingBrowserNotifications.checked = Boolean(state.reminderPreferences.browserNotifications);
   }
   if (dom.settingInappAlerts) {
-    dom.settingInappAlerts.checked = state.reminderPreferences.inAppAlerts;
+    dom.settingInappAlerts.checked = state.reminderPreferences.inAppAlerts !== false;
   }
   if (dom.settingDueSoonHours) {
-    dom.settingDueSoonHours.value = String(state.reminderPreferences.dueSoonHours);
+    dom.settingDueSoonHours.value = String(state.reminderPreferences.dueSoonHours || 24);
+  }
+  if (dom.settingDailyBriefing) {
+    dom.settingDailyBriefing.checked = state.reminderPreferences.dailyBriefingEnabled !== false;
+  }
+  if (dom.settingPriorityFilter) {
+    dom.settingPriorityFilter.value = state.reminderPreferences.priorityFilter || 'all';
+  }
+  if (dom.settingQuietHoursEnabled) {
+    dom.settingQuietHoursEnabled.checked = Boolean(state.reminderPreferences.quietHoursEnabled);
+  }
+  if (dom.settingsQuietHoursRange) {
+    dom.settingsQuietHoursRange.classList.toggle('is-hidden', !state.reminderPreferences.quietHoursEnabled);
+  }
+  if (dom.settingQuietHoursStart) {
+    dom.settingQuietHoursStart.value = state.reminderPreferences.quietHoursStart || '22:00';
+  }
+  if (dom.settingQuietHoursEnd) {
+    dom.settingQuietHoursEnd.value = state.reminderPreferences.quietHoursEnd || '08:00';
   }
 
   dom.settingsOverlay.classList.add('is-open');
@@ -849,6 +916,7 @@ async function handleClearCompletedTasks() {
 
   state.tasks = state.tasks.filter((t) => t.status !== 'completed' && !t.completed);
   const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
   render();
   closeSettings();
   if (saved) {
@@ -869,6 +937,7 @@ async function handleResetAllTasks() {
 
   state.tasks = [];
   const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
   render();
   closeSettings();
   if (saved) {
@@ -1051,6 +1120,7 @@ function handleFormSubmit(event) {
     }
 
     const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
     closeModal();
     if (state.currentView === 'calendar') {
       renderCalendar();
@@ -1108,6 +1178,7 @@ function handleToggleStatus(taskId) {
   }
 
   const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
   if (state.currentView === 'calendar') {
     renderCalendar();
   } else if (state.currentView === 'analytics') {
@@ -1162,7 +1233,6 @@ function updateTaskListAfterToggle(taskId, nextTaskToInsert = null) {
     render();
     return;
   }
-
 
   // Evaluate whether the toggled task still qualifies for display under current filter settings
   const matchesFilter = applyFilters([updatedTask], {
@@ -1252,6 +1322,7 @@ async function handleDeleteTask(taskId) {
 
   state.tasks = deleteTask(state.tasks, taskId);
   const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
   if (state.currentView === 'calendar') {
     renderCalendar();
   } else if (state.currentView === 'analytics') {
@@ -1495,12 +1566,13 @@ function buildTaskCard(task, referenceDate) {
   }
   meta.appendChild(statusBadge);
 
-  // Date (relative)
+  // Date (relative activity timestamp)
   const dateEl = document.createElement('time');
   dateEl.className = 'task-card__date';
-  const targetDate = task.updatedAt || task.createdAt;
-  dateEl.setAttribute('datetime', targetDate);
-  dateEl.textContent = formatDate(targetDate);
+  const activity = formatTaskActivity(task);
+  dateEl.setAttribute('datetime', activity.datetime);
+  dateEl.textContent = activity.label;
+  dateEl.title = activity.tooltip;
   meta.appendChild(dateEl);
 
   body.appendChild(meta);
@@ -1582,7 +1654,8 @@ function buildDayAgendaTaskCard(task) {
   if (task.reminderTime) {
     const timeBadge = document.createElement('span');
     timeBadge.className = 'badge badge-reminder-time';
-    timeBadge.textContent = `⏰ ${task.reminderTime}`;
+    timeBadge.textContent = `⏰ Reminder: ${task.reminderTime}`;
+    timeBadge.setAttribute('aria-label', `Reminder time ${task.reminderTime}`);
     metaRow.appendChild(timeBadge);
   }
 
@@ -1638,17 +1711,16 @@ function renderCalendar() {
       dom.calendarTitle.textContent = `${agenda.dayFullName}, ${agenda.monthName} ${agenda.dayNumber}, ${agenda.year}`;
     } else if (viewMode === 'week') {
       const weekDays = getWeekDays(selectedDate);
-      const start = weekDays[0];
-      const end = weekDays[6];
-      if (start.month === end.month) {
-        dom.calendarTitle.textContent = `${MONTH_NAMES[start.month]} ${start.dayNumber} – ${end.dayNumber}, ${start.year}`;
-      } else {
-        dom.calendarTitle.textContent = `${SHORT_MONTH_NAMES[start.month]} ${start.dayNumber} – ${SHORT_MONTH_NAMES[end.month]} ${end.dayNumber}, ${end.year}`;
-      }
+      dom.calendarTitle.textContent = formatWeekTitle(weekDays);
     } else {
       dom.calendarTitle.textContent = `${MONTH_NAMES[month]} ${year}`;
     }
   }
+
+  // Prev / Next button accessible labels
+  const modeLabel = viewMode === 'day' ? 'day' : (viewMode === 'week' ? 'week' : 'month');
+  if (dom.btnCalPrev) dom.btnCalPrev.setAttribute('aria-label', `Previous ${modeLabel}`);
+  if (dom.btnCalNext) dom.btnCalNext.setAttribute('aria-label', `Next ${modeLabel}`);
 
   // View modes button state
   dom.calViewModes.forEach(btn => {
@@ -1714,6 +1786,34 @@ function renderCalendar() {
 
     dayWrapper.appendChild(headerBanner);
 
+    // If completely empty day (no tasks scheduled and no overdue items)
+    if (agenda.tasks.length === 0 && agenda.overdueTasks.length === 0) {
+      const emptyDayCard = document.createElement('div');
+      emptyDayCard.className = 'calendar-empty-day';
+      emptyDayCard.innerHTML = `
+        <div class="calendar-empty-day__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <div class="calendar-empty-day__content">
+          <h4 class="calendar-empty-day__title">No tasks scheduled for this day</h4>
+          <p class="calendar-empty-day__text">Plan ahead by adding a scheduled task to your calendar agenda.</p>
+        </div>
+        <button id="btn-empty-day-add" type="button" class="btn btn-primary btn-sm">
+          <span>+ Add Task</span>
+        </button>
+      `;
+      const emptyAddBtn = emptyDayCard.querySelector('#btn-empty-day-add');
+      if (emptyAddBtn) {
+        emptyAddBtn.addEventListener('click', () => handleOpenAddModal(agenda.dateString));
+      }
+      dayWrapper.appendChild(emptyDayCard);
+    }
+
     // 2. Overdue Alert Section (if any overdue tasks)
     if (agenda.overdueTasks.length > 0) {
       const overdueSection = document.createElement('div');
@@ -1734,28 +1834,30 @@ function renderCalendar() {
     }
 
     // 3. All-Day / Scheduled Tasks Section
-    const allDaySection = document.createElement('div');
-    allDaySection.className = 'day-agenda-section';
+    if (agenda.tasks.length > 0 || agenda.overdueTasks.length > 0) {
+      const allDaySection = document.createElement('div');
+      allDaySection.className = 'day-agenda-section';
 
-    const allDayHeader = document.createElement('h4');
-    allDayHeader.className = 'day-agenda-section-title';
-    allDayHeader.textContent = `📅 All-Day & Scheduled Tasks (${agenda.allDayTasks.length})`;
-    allDaySection.appendChild(allDayHeader);
+      const allDayHeader = document.createElement('h4');
+      allDayHeader.className = 'day-agenda-section-title';
+      allDayHeader.textContent = `📅 All-Day & Untimed Tasks (${agenda.allDayTasks.length})`;
+      allDaySection.appendChild(allDayHeader);
 
-    if (agenda.allDayTasks.length === 0) {
-      const emptyP = document.createElement('p');
-      emptyP.className = 'text-muted text-xs';
-      emptyP.textContent = 'No all-day tasks scheduled for this date.';
-      allDaySection.appendChild(emptyP);
-    } else {
-      const allDayList = document.createElement('div');
-      allDayList.className = 'day-agenda-task-list';
-      agenda.allDayTasks.forEach(task => {
-        allDayList.appendChild(buildDayAgendaTaskCard(task));
-      });
-      allDaySection.appendChild(allDayList);
+      if (agenda.allDayTasks.length === 0) {
+        const emptyP = document.createElement('p');
+        emptyP.className = 'text-muted text-xs';
+        emptyP.textContent = 'No all-day tasks scheduled for this date.';
+        allDaySection.appendChild(emptyP);
+      } else {
+        const allDayList = document.createElement('div');
+        allDayList.className = 'day-agenda-task-list';
+        agenda.allDayTasks.forEach(task => {
+          allDayList.appendChild(buildDayAgendaTaskCard(task));
+        });
+        allDaySection.appendChild(allDayList);
+      }
+      dayWrapper.appendChild(allDaySection);
     }
-    dayWrapper.appendChild(allDaySection);
 
     // 4. Hourly Timeline
     const timelineSection = document.createElement('div');
@@ -1763,7 +1865,7 @@ function renderCalendar() {
 
     const timeHeader = document.createElement('h4');
     timeHeader.className = 'day-agenda-section-title';
-    timeHeader.textContent = `⏰ Hourly Schedule (${agenda.timedTasks.length} timed)`;
+    timeHeader.textContent = `⏰ Reminder Timeline (${agenda.timedTasks.length} with reminder)`;
     timelineSection.appendChild(timeHeader);
 
     const timelineContainer = document.createElement('div');
@@ -1793,8 +1895,8 @@ function renderCalendar() {
         const addSlotBtn = document.createElement('button');
         addSlotBtn.type = 'button';
         addSlotBtn.className = 'agenda-empty-slot';
-        addSlotBtn.textContent = `+ Add at ${slot.label}`;
-        addSlotBtn.setAttribute('aria-label', `Add task for ${slot.label}`);
+        addSlotBtn.textContent = `+ Set reminder at ${slot.label}`;
+        addSlotBtn.setAttribute('aria-label', `Add task with reminder at ${slot.label}`);
         addSlotBtn.addEventListener('click', () => {
           handleOpenAddModal(agenda.dateString);
           if (dom.fieldReminderTime) dom.fieldReminderTime.value = slot.timeString;
@@ -1820,7 +1922,7 @@ function renderCalendar() {
     weekDays.forEach(day => {
       const dayHeader = document.createElement('div');
       dayHeader.className = 'calendar-weekday';
-      dayHeader.textContent = `${day.dayName} ${day.dayNumber}`;
+      dayHeader.textContent = day.dayName;
       weekWrapper.appendChild(dayHeader);
     });
 
@@ -1835,7 +1937,7 @@ function renderCalendar() {
 
       cell.setAttribute('role', 'button');
       cell.setAttribute('tabindex', '0');
-      cell.setAttribute('aria-label', `${day.dayFullName}, ${day.dateString}`);
+      cell.setAttribute('aria-selected', day.dateString === selectedDate ? 'true' : 'false');
 
       const header = document.createElement('div');
       header.className = 'calendar-day-header';
@@ -1847,6 +1949,13 @@ function renderCalendar() {
 
       const dayTasks = getTasksForDate(state.tasks, day.dateString);
       const summary = getDayTaskSummary(dayTasks, new Date());
+
+      const dateLabel = `${day.dayFullName}, ${MONTH_NAMES[day.month]} ${day.dayNumber}, ${day.year}`;
+      const statusPart = day.isToday ? ' (Today)' : '';
+      const taskPart = summary.total > 0
+        ? `, ${summary.total} task${summary.total === 1 ? '' : 's'} (${summary.completed} completed${summary.overdue > 0 ? `, ${summary.overdue} overdue` : ''})`
+        : ', no tasks';
+      cell.setAttribute('aria-label', `${dateLabel}${statusPart}${taskPart}`);
 
       if (summary.total > 0) {
         const badge = document.createElement('span');
@@ -1864,9 +1973,34 @@ function renderCalendar() {
           const pill = document.createElement('div');
           pill.className = `calendar-task-pill ${t.status === 'completed' || t.completed ? 'is-completed' : ''} ${t.priority === 'high' ? 'calendar-task-pill--high' : ''}`;
           pill.textContent = t.title;
+          pill.setAttribute('role', 'button');
+          pill.setAttribute('tabindex', '0');
+          pill.setAttribute('aria-label', `Edit task: ${t.title}`);
+          pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleEditTask(t.id);
+          });
+          pill.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              handleEditTask(t.id);
+            }
+          });
           pillContainer.appendChild(pill);
         });
         cell.appendChild(pillContainer);
+
+        // Compact dots container for smaller screens
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'calendar-day-dots';
+        dayTasks.slice(0, 4).forEach(t => {
+          const dot = document.createElement('span');
+          dot.className = `calendar-task-dot ${t.status === 'completed' || t.completed ? 'is-completed' : ''} priority-${t.priority || 'medium'}`;
+          dot.setAttribute('title', `${t.title} (${t.priority || 'medium'})`);
+          dotsContainer.appendChild(dot);
+        });
+        cell.appendChild(dotsContainer);
       }
 
       cell.addEventListener('click', () => {
@@ -1913,7 +2047,7 @@ function renderCalendar() {
 
       cell.setAttribute('role', 'button');
       cell.setAttribute('tabindex', '0');
-      cell.setAttribute('aria-label', `${slot.dateString}`);
+      cell.setAttribute('aria-selected', slot.dateString === selectedDate ? 'true' : 'false');
 
       const header = document.createElement('div');
       header.className = 'calendar-day-header';
@@ -1925,6 +2059,17 @@ function renderCalendar() {
 
       const dayTasks = getTasksForDate(state.tasks, slot.dateString);
       const summary = getDayTaskSummary(dayTasks, new Date());
+
+      const parsedSlotDate = parseLocalDate(slot.dateString);
+      const dateLabel = parsedSlotDate
+        ? `${DAYS_OF_WEEK_FULL[parsedSlotDate.getDay()]}, ${MONTH_NAMES[parsedSlotDate.getMonth()]} ${parsedSlotDate.getDate()}, ${parsedSlotDate.getFullYear()}`
+        : slot.dateString;
+      const statusPart = slot.isToday ? ' (Today)' : '';
+      const otherPart = slot.isCurrentMonth ? '' : ' (Other month)';
+      const taskPart = summary.total > 0
+        ? `, ${summary.total} task${summary.total === 1 ? '' : 's'} (${summary.completed} completed${summary.overdue > 0 ? `, ${summary.overdue} overdue` : ''})`
+        : ', no tasks';
+      cell.setAttribute('aria-label', `${dateLabel}${statusPart}${otherPart}${taskPart}`);
 
       if (summary.total > 0) {
         const badge = document.createElement('span');
@@ -1943,6 +2088,20 @@ function renderCalendar() {
           const pill = document.createElement('div');
           pill.className = `calendar-task-pill ${t.status === 'completed' || t.completed ? 'is-completed' : ''} ${t.priority === 'high' ? 'calendar-task-pill--high' : ''}`;
           pill.textContent = t.title;
+          pill.setAttribute('role', 'button');
+          pill.setAttribute('tabindex', '0');
+          pill.setAttribute('aria-label', `Edit task: ${t.title}`);
+          pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleEditTask(t.id);
+          });
+          pill.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              handleEditTask(t.id);
+            }
+          });
           pillContainer.appendChild(pill);
         });
         if (dayTasks.length > 3) {
@@ -1952,6 +2111,17 @@ function renderCalendar() {
           pillContainer.appendChild(more);
         }
         cell.appendChild(pillContainer);
+
+        // Compact dots container for mobile / small screens
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'calendar-day-dots';
+        dayTasks.slice(0, 4).forEach(t => {
+          const dot = document.createElement('span');
+          dot.className = `calendar-task-dot ${t.status === 'completed' || t.completed ? 'is-completed' : ''} priority-${t.priority || 'medium'}`;
+          dot.setAttribute('title', `${t.title} (${t.priority || 'medium'})`);
+          dotsContainer.appendChild(dot);
+        });
+        cell.appendChild(dotsContainer);
       }
 
       cell.addEventListener('click', () => {
@@ -1983,7 +2153,11 @@ function renderCalendarDayDetail() {
   if (!dom.calDayDetailTasks || !dom.calDayDetailTitle) return;
   const { selectedDate } = state.calendar;
 
-  dom.calDayDetailTitle.textContent = `Tasks for ${selectedDate}`;
+  const parsed = parseLocalDate(selectedDate);
+  const formattedTitle = parsed
+    ? `${DAYS_OF_WEEK_FULL[parsed.getDay()]}, ${MONTH_NAMES[parsed.getMonth()]} ${parsed.getDate()}, ${parsed.getFullYear()}`
+    : selectedDate;
+  dom.calDayDetailTitle.textContent = `Tasks for ${formattedTitle}`;
   dom.calDayDetailTasks.replaceChildren();
 
   const dayTasks = getTasksForDate(state.tasks, selectedDate);
@@ -2005,7 +2179,7 @@ function renderCalendarDayDetail() {
 
 function renderAnalytics() {
   if (!dom.analyticsView) return;
-  const { timeFrame } = state.analytics;
+  const { timeFrame, granularity = 'day' } = state.analytics;
 
   // Sync timeframe tab buttons
   dom.analyticsTimeframeTabs.forEach(btn => {
@@ -2014,56 +2188,99 @@ function renderAnalytics() {
     btn.setAttribute('aria-pressed', tf === timeFrame ? 'true' : 'false');
   });
 
+  // Sync granularity tab buttons
+  if (dom.analyticsGranularityTabs) {
+    dom.analyticsGranularityTabs.forEach(btn => {
+      const g = btn.getAttribute('data-granularity');
+      btn.classList.toggle('is-active', g === granularity);
+      btn.setAttribute('aria-pressed', g === granularity ? 'true' : 'false');
+    });
+  }
+
   const filteredTasks = filterTasksByTimeFrame(state.tasks, timeFrame);
-  const overview = computeProductivityOverview(filteredTasks);
+  const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
+  let periodDays = daysMap[timeFrame];
+  if (!periodDays) {
+    let earliestTime = Date.now();
+    let hasEarliest = false;
+    for (const t of filteredTasks) {
+      if (t.createdAt) {
+        const time = new Date(t.createdAt).getTime();
+        if (!isNaN(time) && time < earliestTime) {
+          earliestTime = time;
+          hasEarliest = true;
+        }
+      }
+    }
+    periodDays = hasEarliest ? Math.max(1, Math.ceil((Date.now() - earliestTime) / (24 * 60 * 60 * 1000))) : 1;
+  }
+  const overview = computeProductivityOverview(filteredTasks, new Date(), periodDays);
 
   if (dom.analyticsStatTotal)     setText(dom.analyticsStatTotal, overview.total);
   if (dom.analyticsStatCompleted) setText(dom.analyticsStatCompleted, overview.completed);
   if (dom.analyticsStatPending)   setText(dom.analyticsStatPending, overview.pending);
   if (dom.analyticsStatOverdue)   setText(dom.analyticsStatOverdue, overview.overdue);
   if (dom.analyticsStatRate)      setText(dom.analyticsStatRate, `${overview.completionRate}%`);
-  if (dom.analyticsStatAvgPerDay) {
-    const daysMap = { '7d': 7, '30d': 30, '90d': 90, 'all': 30 };
-    const timeFrameDays = daysMap[timeFrame] || 7;
-    const avg = overview.averagePerDay !== undefined ? overview.averagePerDay : Number((overview.completed / timeFrameDays).toFixed(1));
-    setText(dom.analyticsStatAvgPerDay, avg);
-  }
+  if (dom.analyticsStatAvgPerDay) setText(dom.analyticsStatAvgPerDay, overview.averagePerDay);
 
-  // Completion Trend Chart (Pure SVG)
+  // Dual-Series Trend Chart (Pure SVG)
   if (dom.analyticsTrendChartContainer) {
-    const trendDays = timeFrame === '7d' ? 7 : (timeFrame === '30d' ? 14 : 30);
-    const trends = computeDailyCompletionTrends(state.tasks, trendDays);
-    const svgString = generateTrendChartSVG(trends);
+    let trendData;
+    if (granularity === 'month') {
+      trendData = computeMonthlyCompletionTrends(state.tasks, 6);
+    } else if (granularity === 'week') {
+      trendData = computeWeeklyCompletionTrends(state.tasks, 8);
+    } else {
+      const trendDays = timeFrame === '7d' ? 7 : (timeFrame === '30d' ? 14 : 30);
+      trendData = computeDailyCompletionTrends(state.tasks, trendDays);
+    }
+    const svgString = generateTrendChartSVG(trendData);
     dom.analyticsTrendChartContainer.innerHTML = svgString;
   }
 
-  // Category Performance
+  // Category Performance (Completed vs Pending Stacked Bars)
   if (dom.analyticsCategoryContainer) {
     dom.analyticsCategoryContainer.replaceChildren();
-    const catStats = computeCategoryAnalytics(filteredTasks);
+    const catStats = computeCategoryAnalytics(filteredTasks, true);
     catStats.forEach(item => {
       const row = document.createElement('div');
       row.className = 'analytics-breakdown-row';
 
       const meta = document.createElement('div');
       meta.className = 'analytics-breakdown-meta';
+
       const labelSpan = document.createElement('span');
+      labelSpan.className = 'breakdown-label';
       const strong = document.createElement('strong');
       strong.textContent = item.category;
       labelSpan.appendChild(strong);
-      labelSpan.appendChild(document.createTextNode(` (${item.completed}/${item.total})`));
+      labelSpan.appendChild(document.createTextNode(` (${item.completed} done, ${item.pending} pending)`));
+
       const rateSpan = document.createElement('span');
-      const categoryRate = item.rate !== undefined ? item.rate : item.completionRate;
-      rateSpan.textContent = `${categoryRate}%`;
+      rateSpan.className = 'breakdown-rate';
+      rateSpan.textContent = item.total > 0 ? `${item.rate}% done` : '0 tasks (0%)';
+
       meta.appendChild(labelSpan);
       meta.appendChild(rateSpan);
 
       const bar = document.createElement('div');
-      bar.className = 'analytics-breakdown-bar';
-      const fill = document.createElement('div');
-      fill.className = 'analytics-breakdown-fill';
-      fill.style.width = `${categoryRate}%`;
-      bar.appendChild(fill);
+      bar.className = 'analytics-stacked-bar';
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-valuenow', String(item.rate));
+      bar.setAttribute('aria-valuemin', '0');
+      bar.setAttribute('aria-valuemax', '100');
+      bar.setAttribute('aria-label', `${item.category}: ${item.rate}% completed`);
+
+      const fillComp = document.createElement('div');
+      fillComp.className = 'analytics-stacked-segment analytics-stacked-segment--completed';
+      fillComp.style.width = `${item.rate}%`;
+
+      const fillPending = document.createElement('div');
+      fillPending.className = 'analytics-stacked-segment analytics-stacked-segment--pending';
+      fillPending.style.width = `${item.pendingRate}%`;
+
+      bar.appendChild(fillComp);
+      bar.appendChild(fillPending);
 
       row.appendChild(meta);
       row.appendChild(bar);
@@ -2071,7 +2288,7 @@ function renderAnalytics() {
     });
   }
 
-  // Priority Distribution
+  // Priority Breakdown & Workload
   if (dom.analyticsPriorityContainer) {
     dom.analyticsPriorityContainer.replaceChildren();
     const prioStats = computePriorityAnalytics(filteredTasks);
@@ -2085,14 +2302,21 @@ function renderAnalytics() {
       const labelCapital = p.charAt(0).toUpperCase() + p.slice(1);
       const meta = document.createElement('div');
       meta.className = 'analytics-breakdown-meta';
+
       const labelSpan = document.createElement('span');
+      labelSpan.className = 'breakdown-label';
       const strong = document.createElement('strong');
       strong.textContent = `${labelCapital} Priority`;
       labelSpan.appendChild(strong);
+
       const taskCount = item.total !== undefined ? item.total : item.count;
-      labelSpan.appendChild(document.createTextNode(` (${taskCount} tasks)`));
+      const overdueText = item.overdue > 0 ? `, ${item.overdue} overdue` : '';
+      labelSpan.appendChild(document.createTextNode(` (${taskCount} total • ${item.pending} pending${overdueText})`));
+
       const rateSpan = document.createElement('span');
-      rateSpan.textContent = `${item.percentage}%`;
+      rateSpan.className = 'breakdown-rate';
+      rateSpan.textContent = `${item.percentage}% share`;
+
       meta.appendChild(labelSpan);
       meta.appendChild(rateSpan);
 
@@ -2112,10 +2336,73 @@ function renderAnalytics() {
     });
   }
 
+  // Scheduled Workload Horizon
+  if (dom.analyticsHorizonContainer) {
+    dom.analyticsHorizonContainer.replaceChildren();
+    const horizon = computeWorkloadTimeline(filteredTasks);
+    const buckets = [
+      { key: 'overdue', label: 'Overdue', count: horizon.overdue, className: 'horizon-badge--overdue' },
+      { key: 'today', label: 'Due Today', count: horizon.today, className: 'horizon-badge--today' },
+      { key: 'thisWeek', label: 'Due This Week', count: horizon.thisWeek, className: 'horizon-badge--week' },
+      { key: 'later', label: 'Due Later', count: horizon.later, className: 'horizon-badge--later' },
+      { key: 'unscheduled', label: 'Unscheduled', count: horizon.unscheduled, className: 'horizon-badge--unscheduled' },
+    ];
+
+    buckets.forEach(b => {
+      const card = document.createElement('div');
+      card.className = `analytics-horizon-card ${b.className}`;
+
+      const countEl = document.createElement('span');
+      countEl.className = 'analytics-horizon-count';
+      countEl.textContent = String(b.count);
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'analytics-horizon-label';
+      labelEl.textContent = b.label;
+
+      card.appendChild(countEl);
+      card.appendChild(labelEl);
+      dom.analyticsHorizonContainer.appendChild(card);
+    });
+  }
+
   // Productivity Insights
   if (dom.analyticsInsightsContainer) {
-    const insightText = computeProductivityInsights(state.tasks);
-    dom.analyticsInsightsContainer.textContent = insightText;
+    dom.analyticsInsightsContainer.replaceChildren();
+    const insights = computeProductivityInsights(filteredTasks);
+    if (!insights || insights.length === 0) {
+      const emptyP = document.createElement('p');
+      emptyP.className = 'text-muted text-sm';
+      emptyP.textContent = 'No productivity insights available for this period.';
+      dom.analyticsInsightsContainer.appendChild(emptyP);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'analytics-insights-list';
+      insights.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `analytics-insight-item analytics-insight-item--${item.type}`;
+
+        const iconWrap = document.createElement('span');
+        iconWrap.className = 'analytics-insight-icon';
+        iconWrap.setAttribute('aria-hidden', 'true');
+        if (item.type === 'positive') {
+          iconWrap.appendChild(createCheckIcon(14));
+        } else if (item.type === 'warning') {
+          iconWrap.appendChild(createAlertIcon(14));
+        } else {
+          iconWrap.appendChild(createToastInfoIcon(14));
+        }
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'analytics-insight-text';
+        textSpan.textContent = item.text;
+
+        row.appendChild(iconWrap);
+        row.appendChild(textSpan);
+        list.appendChild(row);
+      });
+      dom.analyticsInsightsContainer.appendChild(list);
+    }
   }
 }
 
@@ -2166,6 +2453,13 @@ function updateSidebarBadges() {
   if (dom.sidebarBadgeOverdue) {
     dom.sidebarBadgeOverdue.classList.toggle('sidebar-nav__badge--danger', overdue > 0);
   }
+
+  // Update category badges
+  const categoryCounts = countTasksByCategory(state.tasks);
+  Object.entries(categoryCounts).forEach(([cat, count]) => {
+    const badgeEl = document.getElementById(`cat-badge-${cat}`);
+    if (badgeEl) setText(badgeEl, count);
+  });
 }
 
 function updateActiveSidebarLink() {
@@ -2318,8 +2612,23 @@ function handleOpenAddModal(initialDate = null) {
 // ─── Smart Reminders Engine ───────────────────────────────────────────────────
 
 function triggerSmartRemindersCheck() {
+  // Prune any stale keys from completed or deleted tasks
+  pruneNotifiedReminders(state.tasks);
+
+  // Generate daily productivity briefing if enabled
+  if (state.reminderPreferences.dailyBriefingEnabled) {
+    const briefing = generateDailyBriefing(state.tasks);
+    if (briefing && state.notificationCenter) {
+      const stored = state.notificationCenter.addNotification(briefing);
+      if (stored && !isQuietHours(new Date(), state.reminderPreferences) && state.reminderPreferences.inAppAlerts) {
+        showToast(briefing.message, 'info', 6000);
+      }
+    }
+  }
+
   checkReminders(state.tasks, {
     preferences: state.reminderPreferences,
+    notificationCenter: state.notificationCenter,
     onInAppNotify: (notification) => {
       showToast(notification.message, notification.type === 'overdue' ? 'error' : 'info', 5000);
     },
@@ -2334,6 +2643,38 @@ function triggerSmartRemindersCheck() {
       }
     },
   });
+
+  // Update Notification Center badge and panel if open
+  if (state.notificationCenterUI) {
+    state.notificationCenterUI.updateBadge();
+    if (state.notificationCenterUI.isOpen) {
+      state.notificationCenterUI.renderList();
+    }
+  }
+}
+
+function handleNavigateToTask(taskId) {
+  const task = findTaskById(state.tasks, taskId);
+  if (!task) {
+    showToast('Task no longer exists.', 'warning');
+    return false;
+  }
+
+  // Switch to tasks view if on calendar or analytics view
+  if (state.currentView !== 'tasks') {
+    switchView('tasks');
+  }
+
+  // Clear search query if set so the task is not filtered out
+  if (state.searchQuery) {
+    state.searchQuery = '';
+    if (dom.searchInput) dom.searchInput.value = '';
+    render();
+  }
+
+  // Open the task in edit modal
+  handleEditTask(taskId);
+  return true;
 }
 
 // ─── Event Wiring ─────────────────────────────────────────────────────────────
@@ -2396,18 +2737,18 @@ function wireEvents() {
         state.calendar.year = next.year;
         state.calendar.month = next.month;
       } else if (state.calendar.viewMode === 'week') {
-        const cur = new Date(`${state.calendar.selectedDate}T00:00:00`);
-        cur.setDate(cur.getDate() - 7);
-        state.calendar.year = cur.getFullYear();
-        state.calendar.month = cur.getMonth();
-        state.calendar.selectedDate = formatCalendarDate(cur.getFullYear(), cur.getMonth(), cur.getDate());
+        const next = navigateWeek(state.calendar.selectedDate, -1);
+        state.calendar.selectedDate = next.dateString;
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
       } else {
-        if (state.calendar.month === 0) {
-          state.calendar.month = 11;
-          state.calendar.year -= 1;
-        } else {
-          state.calendar.month -= 1;
-        }
+        const next = navigateMonth(state.calendar.year, state.calendar.month, -1);
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
+        const prevDate = parseLocalDate(state.calendar.selectedDate) || new Date();
+        const maxDays = getDaysInMonth(next.year, next.month);
+        const newDay = Math.min(prevDate.getDate(), maxDays);
+        state.calendar.selectedDate = formatCalendarDate(next.year, next.month, newDay);
       }
       renderCalendar();
     });
@@ -2421,18 +2762,18 @@ function wireEvents() {
         state.calendar.year = next.year;
         state.calendar.month = next.month;
       } else if (state.calendar.viewMode === 'week') {
-        const cur = new Date(`${state.calendar.selectedDate}T00:00:00`);
-        cur.setDate(cur.getDate() + 7);
-        state.calendar.year = cur.getFullYear();
-        state.calendar.month = cur.getMonth();
-        state.calendar.selectedDate = formatCalendarDate(cur.getFullYear(), cur.getMonth(), cur.getDate());
+        const next = navigateWeek(state.calendar.selectedDate, 1);
+        state.calendar.selectedDate = next.dateString;
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
       } else {
-        if (state.calendar.month === 11) {
-          state.calendar.month = 0;
-          state.calendar.year += 1;
-        } else {
-          state.calendar.month += 1;
-        }
+        const next = navigateMonth(state.calendar.year, state.calendar.month, 1);
+        state.calendar.year = next.year;
+        state.calendar.month = next.month;
+        const prevDate = parseLocalDate(state.calendar.selectedDate) || new Date();
+        const maxDays = getDaysInMonth(next.year, next.month);
+        const newDay = Math.min(prevDate.getDate(), maxDays);
+        state.calendar.selectedDate = formatCalendarDate(next.year, next.month, newDay);
       }
       renderCalendar();
     });
@@ -2468,6 +2809,16 @@ function wireEvents() {
       renderAnalytics();
     });
   });
+
+  // Analytics Granularity Tabs
+  if (dom.analyticsGranularityTabs) {
+    dom.analyticsGranularityTabs.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        state.analytics.granularity = e.currentTarget.getAttribute('data-granularity');
+        renderAnalytics();
+      });
+    });
+  }
 
   // Group By Select
   if (dom.groupBySelect) {
@@ -2509,11 +2860,22 @@ function wireEvents() {
     });
   }
 
+  // Helper to persist reminder preferences and guard against local storage failures
+  const updateReminderPref = (updater) => {
+    updater();
+    const ok = saveReminderPreferences(state.reminderPreferences);
+    if (!ok) {
+      showToast('Could not save preference to local storage.', 'warning');
+    }
+    return ok;
+  };
+
   // Smart Reminders Settings Controls
   if (dom.settingBrowserNotifications) {
     dom.settingBrowserNotifications.addEventListener('change', (e) => {
-      state.reminderPreferences.browserNotifications = e.target.checked;
-      saveReminderPreferences(state.reminderPreferences);
+      updateReminderPref(() => {
+        state.reminderPreferences.browserNotifications = e.target.checked;
+      });
     });
   }
 
@@ -2521,10 +2883,13 @@ function wireEvents() {
     dom.btnRequestNotificationPerm.addEventListener('click', async () => {
       const res = await requestNotificationPermission();
       if (res === 'granted') {
-        state.reminderPreferences.browserNotifications = true;
-        if (dom.settingBrowserNotifications) dom.settingBrowserNotifications.checked = true;
-        saveReminderPreferences(state.reminderPreferences);
-        showToast('Browser notifications permission granted.', 'success');
+        const ok = updateReminderPref(() => {
+          state.reminderPreferences.browserNotifications = true;
+          if (dom.settingBrowserNotifications) dom.settingBrowserNotifications.checked = true;
+        });
+        if (ok) {
+          showToast('Browser notifications permission granted.', 'success');
+        }
       } else if (res === 'denied') {
         showToast('Browser notifications permission was denied in browser settings.', 'error');
       } else {
@@ -2535,15 +2900,64 @@ function wireEvents() {
 
   if (dom.settingInappAlerts) {
     dom.settingInappAlerts.addEventListener('change', (e) => {
-      state.reminderPreferences.inAppAlerts = e.target.checked;
-      saveReminderPreferences(state.reminderPreferences);
+      updateReminderPref(() => {
+        state.reminderPreferences.inAppAlerts = e.target.checked;
+      });
     });
   }
 
   if (dom.settingDueSoonHours) {
     dom.settingDueSoonHours.addEventListener('change', (e) => {
-      state.reminderPreferences.dueSoonHours = parseInt(e.target.value, 10);
-      saveReminderPreferences(state.reminderPreferences);
+      updateReminderPref(() => {
+        state.reminderPreferences.dueSoonHours = parseInt(e.target.value, 10);
+      });
+    });
+  }
+
+  if (dom.settingDailyBriefing) {
+    dom.settingDailyBriefing.addEventListener('change', (e) => {
+      updateReminderPref(() => {
+        state.reminderPreferences.dailyBriefingEnabled = e.target.checked;
+      });
+    });
+  }
+
+  if (dom.settingPriorityFilter) {
+    dom.settingPriorityFilter.addEventListener('change', (e) => {
+      updateReminderPref(() => {
+        state.reminderPreferences.priorityFilter = e.target.value;
+      });
+    });
+  }
+
+  if (dom.settingQuietHoursEnabled) {
+    dom.settingQuietHoursEnabled.addEventListener('change', (e) => {
+      updateReminderPref(() => {
+        state.reminderPreferences.quietHoursEnabled = e.target.checked;
+      });
+      if (dom.settingsQuietHoursRange) {
+        dom.settingsQuietHoursRange.classList.toggle('is-hidden', !e.target.checked);
+      }
+    });
+  }
+
+  if (dom.settingQuietHoursStart) {
+    dom.settingQuietHoursStart.addEventListener('change', (e) => {
+      if (e.target.value) {
+        updateReminderPref(() => {
+          state.reminderPreferences.quietHoursStart = e.target.value;
+        });
+      }
+    });
+  }
+
+  if (dom.settingQuietHoursEnd) {
+    dom.settingQuietHoursEnd.addEventListener('change', (e) => {
+      if (e.target.value) {
+        updateReminderPref(() => {
+          state.reminderPreferences.quietHoursEnd = e.target.value;
+        });
+      }
     });
   }
 
@@ -2707,6 +3121,7 @@ function wireEvents() {
       applyTheme('light');
       saveTheme('light');
       const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
       if (saved) {
         showToast('Theme set to Light.', 'info');
       }
@@ -2718,6 +3133,7 @@ function wireEvents() {
       applyTheme('dark');
       saveTheme('dark');
       const saved = persistState();
+  pruneNotifiedReminders(state.tasks);
       if (saved) {
         showToast('Theme set to Dark.', 'info');
       }
@@ -2937,6 +3353,28 @@ function init() {
   // Connect Toast notification manager container
   toastManager.setContainer(dom.toastContainer);
 
+  // Initialize Notification Center UI
+  state.notificationCenterUI = new NotificationCenterUI({
+    notificationCenter: state.notificationCenter,
+    bellButton: dom.btnHeaderNotifications,
+    badge: dom.notificationBadge,
+    badgeSr: dom.notificationBadgeSr,
+    panel: dom.notificationCenterPanel,
+    backdrop: dom.notificationCenterBackdrop,
+    listContainer: dom.notificationListContainer,
+    countPill: dom.notificationUnreadCountPill,
+    filterTabs: dom.notificationFilterTabs,
+    markAllReadBtn: dom.btnNotificationsMarkAllRead,
+    clearAllBtn: dom.btnNotificationsClearAll,
+    closeBtn: dom.btnNotificationClose,
+    onNavigateTask: (taskId) => {
+      handleNavigateToTask(taskId);
+    },
+    onToast: (msg, type) => {
+      showToast(msg, type);
+    },
+  });
+
   // Apply theme immediately
   applyTheme(state.theme);
 
@@ -2946,14 +3384,40 @@ function init() {
   // Initial view switch and render
   switchView(state.currentView);
 
-  // Initial Smart Reminders run and scheduled interval
-  triggerSmartRemindersCheck();
-  setInterval(triggerSmartRemindersCheck, 60000);
+  // Managed Smart Reminders scheduler with visibility change reconciliation
+  startReminderScheduler(triggerSmartRemindersCheck);
+  window.addEventListener('beforeunload', () => stopReminderScheduler());
+  window.addEventListener('pagehide', () => stopReminderScheduler());
+  window.addEventListener('pageshow', (e) => {
+    if (e && e.persisted && !isSchedulerRunning()) {
+      startReminderScheduler(triggerSmartRemindersCheck);
+    }
+  });
+
+  // Cross-tab synchronization via window 'storage' events for preferences
+  window.addEventListener('storage', (e) => {
+    if (!e || !e.key) return;
+    if (e.key === STORAGE_KEY_REMINDER_PREFS) {
+      state.reminderPreferences = loadReminderPreferences();
+      if (dom.settingsOverlay && dom.settingsOverlay.classList.contains('is-open')) {
+        if (dom.settingBrowserNotifications) dom.settingBrowserNotifications.checked = Boolean(state.reminderPreferences.browserNotifications);
+        if (dom.settingInappAlerts) dom.settingInappAlerts.checked = state.reminderPreferences.inAppAlerts !== false;
+        if (dom.settingDueSoonHours) dom.settingDueSoonHours.value = String(state.reminderPreferences.dueSoonHours || 24);
+        if (dom.settingDailyBriefing) dom.settingDailyBriefing.checked = state.reminderPreferences.dailyBriefingEnabled !== false;
+        if (dom.settingPriorityFilter) dom.settingPriorityFilter.value = state.reminderPreferences.priorityFilter || 'all';
+        if (dom.settingQuietHoursEnabled) dom.settingQuietHoursEnabled.checked = Boolean(state.reminderPreferences.quietHoursEnabled);
+        if (dom.settingsQuietHoursRange) dom.settingsQuietHoursRange.classList.toggle('is-hidden', !state.reminderPreferences.quietHoursEnabled);
+        if (dom.settingQuietHoursStart) dom.settingQuietHoursStart.value = state.reminderPreferences.quietHoursStart || '22:00';
+        if (dom.settingQuietHoursEnd) dom.settingQuietHoursEnd.value = state.reminderPreferences.quietHoursEnd || '08:00';
+      }
+    }
+  });
 
   // Expose state and toast hooks exclusively in test / debug mode
   if (urlParams && (urlParams.has('test') || urlParams.has('debug'))) {
     window.__taskflow_state = state;
     window.__taskflow_toasts = toastManager;
+    window.__taskflow_notification_ui = state.notificationCenterUI;
   }
 
   if (urlParams) {
@@ -2963,6 +3427,8 @@ function init() {
       setTimeout(() => openSettings(), 50);
     } else if (urlParams.get('modal') === 'palette') {
       setTimeout(() => openPalette(), 50);
+    } else if (urlParams.get('modal') === 'notifications') {
+      setTimeout(() => state.notificationCenterUI?.open(), 50);
     }
     if (urlParams.get('toast') === '1') {
       setTimeout(() => {

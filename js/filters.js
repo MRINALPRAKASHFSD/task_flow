@@ -304,3 +304,37 @@ export function applyFilters(tasks, {
   result     = sortTasks(result, sortBy);
   return result;
 }
+
+/**
+ * Compute counts for standard categories and total ('all').
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @returns {{ all: number, Work: number, Personal: number, Study: number, Health: number, Finance: number, General: number }}
+ */
+export function countTasksByCategory(tasks = []) {
+  const safeList = Array.isArray(tasks) ? tasks : [];
+  const counts = {
+    all: safeList.length,
+    Work: 0,
+    Personal: 0,
+    Study: 0,
+    Health: 0,
+    Finance: 0,
+    General: 0,
+  };
+
+  for (const t of safeList) {
+    const rawCat = (t && t.category ? String(t.category) : 'General').trim().toLowerCase();
+    const matchedKey = Object.keys(counts).find(
+      (k) => k !== 'all' && k.toLowerCase() === rawCat
+    );
+    if (matchedKey) {
+      counts[matchedKey]++;
+    } else {
+      counts.General++;
+    }
+  }
+
+  return counts;
+}
+

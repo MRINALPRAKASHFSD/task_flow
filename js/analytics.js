@@ -10,7 +10,7 @@
 'use strict';
 
 import { isDateOverdue } from './utils.js';
-import { formatCalendarDate } from './calendar.js';
+import { formatCalendarDate, SHORT_MONTH_NAMES } from './calendar.js';
 
 export const TIME_FRAMES = Object.freeze(['7d', '30d', '90d', 'all']);
 
@@ -44,7 +44,7 @@ export function filterTasksByTimeFrame(tasks, timeFrame = 'all', referenceDate =
  *
  * @param {import('./tasks.js').Task[]} tasks
  * @param {Date} [referenceDate]
- * @param {number} [daysCount] - Number of days in analytical period for velocity calculation
+ * @param {number|'all'} [daysCount] - Number of days in analytical period for velocity calculation
  * @returns {{
  *   total: number,
  *   completed: number,
@@ -87,7 +87,27 @@ export function computeProductivityOverview(tasks, referenceDate = new Date(), d
 
   const total = completed + pending;
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const divisor = Math.max(1, Number.isFinite(daysCount) && daysCount > 0 ? daysCount : 7);
+
+  let divisor = 7;
+  if (typeof daysCount === 'number' && Number.isFinite(daysCount) && daysCount > 0) {
+    divisor = daysCount;
+  } else if (daysCount === 'all') {
+    let earliestTime = referenceDate.getTime();
+    let hasEarliest = false;
+    for (const t of tasks) {
+      if (t.createdAt) {
+        const time = new Date(t.createdAt).getTime();
+        if (!isNaN(time) && time < earliestTime) {
+          earliestTime = time;
+          hasEarliest = true;
+        }
+      }
+    }
+    divisor = hasEarliest
+      ? Math.max(1, Math.ceil((referenceDate.getTime() - earliestTime) / (24 * 60 * 60 * 1000)))
+      : 1;
+  }
+
   const averagePerDay = Number((completed / divisor).toFixed(1));
 
   return {
@@ -143,17 +163,131 @@ export function computeDailyCompletionTrends(tasks, daysCount = 7, referenceDate
 }
 
 /**
- * Compute breakdown by category.
+ * Compute weekly completion and creation trends for the past N calendar weeks.
+ * Each week starts on Sunday and ends on Saturday.
  *
  * @param {import('./tasks.js').Task[]} tasks
- * @returns {Array<{ category: string, total: number, completed: number, pending: number, rate: number }>}
+ * @param {number} [weeksCount] - default 8
+ * @param {Date} [referenceDate]
+ * @returns {Array<{ label: string, weekStart: string, weekEnd: string, completedCount: number, createdCount: number }>}
  */
-export function computeCategoryAnalytics(tasks) {
+export function computeWeeklyCompletionTrends(tasks, weeksCount = 8, referenceDate = new Date()) {
+  const points = [];
+  const safeList = Array.isArray(tasks) ? tasks : [];
+
+  const refDayOfWeek = referenceDate.getDay();
+  const currentWeekSunday = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate() - refDayOfWeek);
+
+  for (let i = weeksCount - 1; i >= 0; i--) {
+    const weekStart = new Date(currentWeekSunday.getFullYear(), currentWeekSunday.getMonth(), currentWeekSunday.getDate() - (i * 7));
+    const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+
+    const startStr = formatCalendarDate(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+    const endStr = formatCalendarDate(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate());
+
+    const startLabel = `${SHORT_MONTH_NAMES[weekStart.getMonth()]} ${weekStart.getDate()}`;
+    const endLabel = weekStart.getMonth() === weekEnd.getMonth()
+      ? `${weekEnd.getDate()}`
+      : `${SHORT_MONTH_NAMES[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
+    const label = `${startLabel}–${endLabel}`;
+
+    let completedCount = 0;
+    let createdCount = 0;
+
+    for (const t of safeList) {
+      if ((t.status === 'completed' || t.completed) && t.updatedAt) {
+        const uDate = t.updatedAt.slice(0, 10);
+        if (uDate >= startStr && uDate <= endStr) {
+          completedCount++;
+        }
+      }
+      if (t.createdAt) {
+        const cDate = t.createdAt.slice(0, 10);
+        if (cDate >= startStr && cDate <= endStr) {
+          createdCount++;
+        }
+      }
+    }
+
+    points.push({
+      label,
+      weekStart: startStr,
+      weekEnd: endStr,
+      completedCount,
+      createdCount,
+    });
+  }
+
+  return points;
+}
+
+/**
+ * Compute monthly completion and creation trends for the past N calendar months.
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @param {number} [monthsCount] - default 6
+ * @param {Date} [referenceDate]
+ * @returns {Array<{ label: string, year: number, month: number, completedCount: number, createdCount: number }>}
+ */
+export function computeMonthlyCompletionTrends(tasks, monthsCount = 6, referenceDate = new Date()) {
+  const points = [];
+  const safeList = Array.isArray(tasks) ? tasks : [];
+
+  const curYear = referenceDate.getFullYear();
+  const curMonth = referenceDate.getMonth();
+
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const d = new Date(curYear, curMonth - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+    const label = `${SHORT_MONTH_NAMES[m]} '${String(y).slice(-2)}`;
+
+    let completedCount = 0;
+    let createdCount = 0;
+
+    for (const t of safeList) {
+      if ((t.status === 'completed' || t.completed) && t.updatedAt && t.updatedAt.slice(0, 7) === prefix) {
+        completedCount++;
+      }
+      if (t.createdAt && t.createdAt.slice(0, 7) === prefix) {
+        createdCount++;
+      }
+    }
+
+    points.push({
+      label,
+      year: y,
+      month: m,
+      completedCount,
+      createdCount,
+    });
+  }
+
+  return points;
+}
+
+/**
+ * Compute breakdown by category, optionally including standard categories with zero tasks.
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @param {boolean} [includeStandard] - default false for backwards compatibility
+ * @returns {Array<{ category: string, total: number, completed: number, pending: number, rate: number, completionRate: number, pendingRate: number }>}
+ */
+export function computeCategoryAnalytics(tasks, includeStandard = false) {
   const map = new Map();
   const safeList = Array.isArray(tasks) ? tasks : [];
 
+  if (includeStandard) {
+    const standardCategories = ['Work', 'Personal', 'Study', 'Health', 'Finance', 'General'];
+    for (const cat of standardCategories) {
+      map.set(cat, { total: 0, completed: 0, pending: 0 });
+    }
+  }
+
   for (const t of safeList) {
-    const cat = (t.category || 'General').trim();
+    const rawCat = (t.category || 'General').trim();
+    const cat = rawCat || 'General';
     if (!map.has(cat)) {
       map.set(cat, { total: 0, completed: 0, pending: 0 });
     }
@@ -169,6 +303,7 @@ export function computeCategoryAnalytics(tasks) {
   const results = [];
   for (const [category, counts] of map.entries()) {
     const rate = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
+    const pendingRate = counts.total > 0 ? Math.round((counts.pending / counts.total) * 100) : 0;
     results.push({
       category,
       total: counts.total,
@@ -176,32 +311,35 @@ export function computeCategoryAnalytics(tasks) {
       pending: counts.pending,
       rate,
       completionRate: rate,
+      pendingRate,
     });
   }
 
-  // Sort by total descending
-  return results.sort((a, b) => b.total - a.total);
+  // Active categories first (descending by total), then empty ones alphabetically
+  return results.sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
 }
 
 /**
- * Compute breakdown by priority.
+ * Compute breakdown by priority separating total share from pending workload and overdue items.
  *
  * @param {import('./tasks.js').Task[]} tasks
+ * @param {Date} [referenceDate]
  * @returns {{
- *   high: { total: number, count: number, completed: number, pending: number, percentage: number },
- *   medium: { total: number, count: number, completed: number, pending: number, percentage: number },
- *   low: { total: number, count: number, completed: number, pending: number, percentage: number }
+ *   high: { total: number, count: number, completed: number, pending: number, overdue: number, percentage: number, pendingShare: number },
+ *   medium: { total: number, count: number, completed: number, pending: number, overdue: number, percentage: number, pendingShare: number },
+ *   low: { total: number, count: number, completed: number, pending: number, overdue: number, percentage: number, pendingShare: number }
  * }}
  */
-export function computePriorityAnalytics(tasks) {
+export function computePriorityAnalytics(tasks, referenceDate = new Date()) {
   const result = {
-    high: { total: 0, count: 0, completed: 0, pending: 0, percentage: 0 },
-    medium: { total: 0, count: 0, completed: 0, pending: 0, percentage: 0 },
-    low: { total: 0, count: 0, completed: 0, pending: 0, percentage: 0 },
+    high:   { total: 0, count: 0, completed: 0, pending: 0, overdue: 0, percentage: 0, pendingShare: 0 },
+    medium: { total: 0, count: 0, completed: 0, pending: 0, overdue: 0, percentage: 0, pendingShare: 0 },
+    low:    { total: 0, count: 0, completed: 0, pending: 0, overdue: 0, percentage: 0, pendingShare: 0 },
   };
 
   const safeList = Array.isArray(tasks) ? tasks : [];
   let totalTasks = 0;
+  let totalPending = 0;
 
   for (const t of safeList) {
     const prio = (t.priority || 'medium').toLowerCase();
@@ -213,6 +351,10 @@ export function computePriorityAnalytics(tasks) {
       target.completed++;
     } else {
       target.pending++;
+      totalPending++;
+      if (t.dueDate && isDateOverdue(t.dueDate, referenceDate)) {
+        target.overdue++;
+      }
     }
   }
 
@@ -220,6 +362,79 @@ export function computePriorityAnalytics(tasks) {
     result.high.percentage = Math.round((result.high.total / totalTasks) * 100);
     result.medium.percentage = Math.round((result.medium.total / totalTasks) * 100);
     result.low.percentage = Math.round((result.low.total / totalTasks) * 100);
+  }
+
+  if (totalPending > 0) {
+    result.high.pendingShare = Math.round((result.high.pending / totalPending) * 100);
+    result.medium.pendingShare = Math.round((result.medium.pending / totalPending) * 100);
+    result.low.pendingShare = Math.round((result.low.pending / totalPending) * 100);
+  }
+
+  return result;
+}
+
+export const computePriorityWorkload = computePriorityAnalytics;
+
+/**
+ * Classify pending tasks into exactly one of five mutually exclusive workload horizon buckets:
+ * 1. overdue: dueDate < today
+ * 2. today: dueDate === today
+ * 3. thisWeek: today < dueDate <= today + 7 days
+ * 4. later: dueDate > today + 7 days
+ * 5. unscheduled: !dueDate
+ *
+ * Completed tasks are strictly excluded.
+ *
+ * @param {import('./tasks.js').Task[]} tasks
+ * @param {Date} [referenceDate]
+ * @returns {{
+ *   overdue: number,
+ *   today: number,
+ *   thisWeek: number,
+ *   later: number,
+ *   unscheduled: number,
+ *   totalPending: number
+ * }}
+ */
+export function computeWorkloadTimeline(tasks, referenceDate = new Date()) {
+  const result = {
+    overdue: 0,
+    today: 0,
+    thisWeek: 0,
+    later: 0,
+    unscheduled: 0,
+    totalPending: 0,
+  };
+
+  const safeList = Array.isArray(tasks) ? tasks : [];
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth();
+  const refDay = referenceDate.getDate();
+
+  const todayStr = formatCalendarDate(refYear, refMonth, refDay);
+  const weekCutoffDate = new Date(refYear, refMonth, refDay + 7);
+  const weekCutoffStr = formatCalendarDate(weekCutoffDate.getFullYear(), weekCutoffDate.getMonth(), weekCutoffDate.getDate());
+
+  for (const t of safeList) {
+    if (t.status === 'completed' || t.completed) continue;
+
+    result.totalPending++;
+
+    if (!t.dueDate) {
+      result.unscheduled++;
+      continue;
+    }
+
+    const dueStr = t.dueDate.slice(0, 10);
+    if (dueStr < todayStr) {
+      result.overdue++;
+    } else if (dueStr === todayStr) {
+      result.today++;
+    } else if (dueStr <= weekCutoffStr) {
+      result.thisWeek++;
+    } else {
+      result.later++;
+    }
   }
 
   return result;
@@ -238,7 +453,7 @@ export function computeProductivityInsights(tasks, referenceDate = new Date()) {
     return [
       {
         type: 'neutral',
-        text: 'No tasks tracked yet. Create your first task to unlock productivity analytics.',
+        text: 'No tasks tracked in this period. Create your first task to unlock productivity analytics.',
       },
     ];
   }
@@ -250,7 +465,12 @@ export function computeProductivityInsights(tasks, referenceDate = new Date()) {
   const insights = [];
 
   // Completion rate insight
-  if (overview.completionRate >= 80) {
+  if (overview.completionRate === 100) {
+    insights.push({
+      type: 'positive',
+      text: 'Backlog clear! All tracked tasks in this period are completed.',
+    });
+  } else if (overview.completionRate >= 80) {
     insights.push({
       type: 'positive',
       text: `Outstanding momentum! You have completed ${overview.completionRate}% of your tasks.`,
@@ -258,7 +478,12 @@ export function computeProductivityInsights(tasks, referenceDate = new Date()) {
   } else if (overview.completionRate >= 50) {
     insights.push({
       type: 'positive',
-      text: `Steady progress. Over half (${overview.completionRate}%) of your tracked tasks are done.`,
+      text: `Steady progress: ${overview.completionRate}% of your tracked tasks are done.`,
+    });
+  } else if (overview.total >= 3 && overview.completionRate === 0) {
+    insights.push({
+      type: 'neutral',
+      text: `All ${overview.pending} tasks are pending. Pick one high-priority item to build momentum.`,
     });
   } else if (overview.total >= 5 && overview.completionRate < 30) {
     insights.push({
@@ -277,6 +502,14 @@ export function computeProductivityInsights(tasks, referenceDate = new Date()) {
     insights.push({
       type: 'positive',
       text: 'All pending tasks are on schedule with zero overdue items.',
+    });
+  }
+
+  // High priority workload insight
+  if (overview.highPriorityPending > 0) {
+    insights.push({
+      type: 'warning',
+      text: `${overview.highPriorityPending} high-priority ${overview.highPriorityPending === 1 ? 'task requires' : 'tasks require'} your immediate focus.`,
     });
   }
 
@@ -302,53 +535,89 @@ export function computeProductivityInsights(tasks, referenceDate = new Date()) {
 }
 
 /**
- * Render a lightweight, accessible SVG Bar Chart representation of completion trends.
+ * Render a lightweight, accessible dual-series SVG Bar Chart representation of completion trends and task creation.
  * Zero external libraries, fully responsive and scalable.
  *
- * @param {Array<{ label: string, completedCount: number }>} data
- * @param {{ width?: number, height?: number, barColor?: string }} [options]
+ * @param {Array<{ label: string, completedCount?: number, createdCount?: number }>} data
+ * @param {{ width?: number, height?: number, completedColor?: string, createdColor?: string }} [options]
  * @returns {string} Safe SVG markup string
  */
-export function generateTrendChartSVG(data, { width = 480, height = 180, barColor = 'var(--color-primary, #6366f1)' } = {}) {
+export function generateTrendChartSVG(data, {
+  width = 540,
+  height = 180,
+  completedColor = 'var(--color-primary, #0D9488)',
+  createdColor = 'var(--color-text-muted, #94A3B8)',
+} = {}) {
   if (!Array.isArray(data) || data.length === 0) {
-    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="No trend data available"><text x="50%" y="50%" text-anchor="middle" fill="currentColor">No data available</text></svg>`;
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Productivity Trend Chart"><text x="50%" y="50%" text-anchor="middle" fill="currentColor" opacity="0.6">No trend data available</text></svg>`;
   }
 
-  const maxVal = Math.max(...data.map((d) => d.completedCount), 1);
-  const paddingX = 40;
+  const maxVal = Math.max(...data.map((d) => Math.max(d.completedCount || 0, d.createdCount || 0)), 1);
+  const paddingX = 36;
   const paddingBottom = 30;
-  const paddingTop = 20;
+  const paddingTop = 24;
 
   const chartWidth = width - paddingX * 2;
   const chartHeight = height - paddingTop - paddingBottom;
-  const barWidth = Math.max(12, Math.floor(chartWidth / data.length) - 16);
   const slotWidth = chartWidth / data.length;
 
+  const subBarWidth = Math.max(5, Math.min(16, Math.floor((slotWidth - 8) / 2)));
+  const barGap = 2;
+
+  let gridMarkup = '';
   let barsMarkup = '';
   let labelsMarkup = '';
 
-  data.forEach((item, idx) => {
-    const x = paddingX + idx * slotWidth + (slotWidth - barWidth) / 2;
-    const barH = (item.completedCount / maxVal) * chartHeight;
-    const y = paddingTop + (chartHeight - barH);
-    const safeLabel = String(item.label || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const safeCount = Number.isFinite(item.completedCount) ? item.completedCount : 0;
+  // 50% guideline
+  const midY = (paddingTop + chartHeight / 2).toFixed(1);
+  gridMarkup += `<line x1="${paddingX}" y1="${midY}" x2="${(width - paddingX).toFixed(1)}" y2="${midY}" stroke="currentColor" stroke-opacity="0.08" stroke-dasharray="3 3" />`;
+  // Baseline
+  const baseY = (paddingTop + chartHeight).toFixed(1);
+  gridMarkup += `<line x1="${paddingX}" y1="${baseY}" x2="${(width - paddingX).toFixed(1)}" y2="${baseY}" stroke="currentColor" stroke-opacity="0.18" stroke-width="1" />`;
 
+  data.forEach((item, idx) => {
+    const slotX = paddingX + idx * slotWidth;
+    const xComp = slotX + (slotWidth - (subBarWidth * 2 + barGap)) / 2;
+    const xCreated = xComp + subBarWidth + barGap;
+
+    const compCount = Number.isFinite(item.completedCount) ? item.completedCount : 0;
+    const createdCount = Number.isFinite(item.createdCount) ? item.createdCount : 0;
+
+    const compH = (compCount / maxVal) * chartHeight;
+    const createdH = (createdCount / maxVal) * chartHeight;
+
+    const compY = paddingTop + (chartHeight - compH);
+    const createdY = paddingTop + (chartHeight - createdH);
+
+    const safeLabel = String(item.label || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    // Completed bar (Teal)
     barsMarkup += `
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="4" fill="${barColor}" opacity="0.9">
-        <title>${safeLabel}: ${safeCount} completed</title>
+      <rect x="${xComp.toFixed(1)}" y="${compY.toFixed(1)}" width="${subBarWidth}" height="${compH.toFixed(1)}" rx="3" fill="${completedColor}" opacity="0.95">
+        <title>${safeLabel} — Completed: ${compCount}, Created: ${createdCount}</title>
       </rect>
-      <text x="${(x + barWidth / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">${safeCount}</text>
     `;
 
+    // Created bar (Muted)
+    barsMarkup += `
+      <rect x="${xCreated.toFixed(1)}" y="${createdY.toFixed(1)}" width="${subBarWidth}" height="${createdH.toFixed(1)}" rx="3" fill="${createdColor}" opacity="0.6">
+        <title>${safeLabel} — Completed: ${compCount}, Created: ${createdCount}</title>
+      </rect>
+    `;
+
+    if (slotWidth >= 28 && compCount > 0) {
+      barsMarkup += `<text x="${(xComp + subBarWidth / 2).toFixed(1)}" y="${(compY - 4).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="600" fill="currentColor">${compCount}</text>`;
+    }
+
     labelsMarkup += `
-      <text x="${(x + barWidth / 2).toFixed(1)}" y="${(height - 8).toFixed(1)}" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.75">${safeLabel}</text>
+      <text x="${(slotX + slotWidth / 2).toFixed(1)}" y="${(height - 8).toFixed(1)}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.75">${safeLabel}</text>
     `;
   });
 
   return `
     <svg class="analytics-chart-svg" width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Productivity Trend Chart">
-      <line x1="${paddingX}" y1="${(paddingTop + chartHeight).toFixed(1)}" x2="${(width - paddingX).toFixed(1)}" y2="${(paddingTop + chartHeight).toFixed(1)}" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+      <desc>Dual series chart displaying task activity: completed tasks and created tasks.</desc>
+      ${gridMarkup}
       ${barsMarkup}
       ${labelsMarkup}
     </svg>

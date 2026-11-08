@@ -308,6 +308,44 @@ export function navigateDay(dateInput, delta) {
 }
 
 /**
+ * Navigate to next or previous week.
+ *
+ * @param {string|Date} dateInput
+ * @param {number} delta - e.g. -1 or +1
+ * @returns {{ dateString: string, year: number, month: number, day: number }}
+ */
+export function navigateWeek(dateInput, delta) {
+  const d = parseLocalDate(dateInput) || new Date();
+  d.setDate(d.getDate() + delta * 7);
+  return {
+    dateString: formatCalendarDate(d.getFullYear(), d.getMonth(), d.getDate()),
+    year: d.getFullYear(),
+    month: d.getMonth(),
+    day: d.getDate(),
+  };
+}
+
+/**
+ * Format a readable heading title for a 7-day week array.
+ *
+ * @param {Array<{ month: number, dayNumber: number, year: number }>} weekDays
+ * @returns {string}
+ */
+export function formatWeekTitle(weekDays) {
+  if (!Array.isArray(weekDays) || weekDays.length === 0) return '';
+  const start = weekDays[0];
+  const end = weekDays[weekDays.length - 1];
+
+  if (start.year !== end.year) {
+    return `${SHORT_MONTH_NAMES[start.month]} ${start.dayNumber}, ${start.year} – ${SHORT_MONTH_NAMES[end.month]} ${end.dayNumber}, ${end.year}`;
+  }
+  if (start.month !== end.month) {
+    return `${SHORT_MONTH_NAMES[start.month]} ${start.dayNumber} – ${SHORT_MONTH_NAMES[end.month]} ${end.dayNumber}, ${start.year}`;
+  }
+  return `${MONTH_NAMES[start.month]} ${start.dayNumber} – ${end.dayNumber}, ${start.year}`;
+}
+
+/**
  * Compute detailed day agenda breakdown with hourly timeline, all-day tasks, and overdue items.
  *
  * @param {string|Date} dateInput

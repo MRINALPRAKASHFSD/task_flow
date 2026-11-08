@@ -19,10 +19,13 @@ import {
   filterBySearch,
   applyFilters,
   sortTasks,
+  countTasksByCategory,
 } from '../js/filters.js';
 
 import {
   createTask,
+  updateTask,
+  deleteTask,
   toggleTaskStatus,
   replaceTask,
 } from '../js/tasks.js';
@@ -404,3 +407,198 @@ describe('sortTasks', () => {
     assert.equal(sorted[3].id, recurringOriginal.id);
   });
 });
+
+// ─── countTasksByCategory & Category Badge Synchronization ──────────────────
+
+describe('countTasksByCategory & Sidebar Badge Synchronization', () => {
+
+  test('calculates correct total count and individual category counts', () => {
+    const tasks = [
+      createTask({ title: 'T1', category: 'Work' }),
+      createTask({ title: 'T2', category: 'Work' }),
+      createTask({ title: 'T3', category: 'Health' }),
+      createTask({ title: 'T4', category: 'Finance' }),
+      createTask({ title: 'T5', category: 'Study' }),
+      createTask({ title: 'T6', category: 'Personal' }),
+      createTask({ title: 'T7', category: 'General' }),
+    ];
+    const counts = countTasksByCategory(tasks);
+
+    assert.equal(counts.all, 7);
+    assert.equal(counts.Work, 2);
+    assert.equal(counts.Health, 1);
+    assert.equal(counts.Finance, 1);
+    assert.equal(counts.Study, 1);
+    assert.equal(counts.Personal, 1);
+    assert.equal(counts.General, 1);
+  });
+
+  test('reports zero for categories with no matching tasks', () => {
+    const tasks = [
+      createTask({ title: 'T1', category: 'Work' }),
+      createTask({ title: 'T2', category: 'Work' }),
+    ];
+    const counts = countTasksByCategory(tasks);
+
+    assert.equal(counts.all, 2);
+    assert.equal(counts.Work, 2);
+    assert.equal(counts.Personal, 0);
+    assert.equal(counts.Study, 0);
+    assert.equal(counts.Health, 0);
+    assert.equal(counts.Finance, 0);
+    assert.equal(counts.General, 0);
+  });
+
+  test('empty task list returns zero for all categories and total', () => {
+    const counts = countTasksByCategory([]);
+    assert.equal(counts.all, 0);
+    assert.equal(counts.Work, 0);
+    assert.equal(counts.Personal, 0);
+    assert.equal(counts.Study, 0);
+    assert.equal(counts.Health, 0);
+    assert.equal(counts.Finance, 0);
+    assert.equal(counts.General, 0);
+  });
+
+  test('completion does not decrease category counts (completed tasks remain in category)', () => {
+    const t1 = createTask({ title: 'Cardio', category: 'Health' });
+    const t2 = createTask({ title: 'Vitamins', category: 'Health' });
+    let tasks = [t1, t2];
+
+    let counts = countTasksByCategory(tasks);
+    assert.equal(counts.Health, 2);
+    assert.equal(counts.all, 2);
+
+    // Complete both tasks
+    tasks = [toggleTaskStatus(t1), toggleTaskStatus(t2)];
+    counts = countTasksByCategory(tasks);
+
+    // Health count must remain 2 even though tasks are completed
+    assert.equal(counts.Health, 2);
+    assert.equal(counts.all, 2);
+  });
+
+  test('deletion decrements category counts and total correctly', () => {
+    const t1 = createTask({ title: 'W1', category: 'Work' });
+    const t2 = createTask({ title: 'W2', category: 'Work' });
+    const t3 = createTask({ title: 'P1', category: 'Personal' });
+    let tasks = [t1, t2, t3];
+
+    let counts = countTasksByCategory(tasks);
+    assert.equal(counts.Work, 2);
+    assert.equal(counts.Personal, 1);
+    assert.equal(counts.all, 3);
+
+    // Delete one Work task
+    tasks = deleteTask(tasks, t1.id);
+    counts = countTasksByCategory(tasks);
+    assert.equal(counts.Work, 1);
+    assert.equal(counts.Personal, 1);
+    assert.equal(counts.all, 2);
+
+    // Delete remaining Work task
+    tasks = deleteTask(tasks, t2.id);
+    counts = countTasksByCategory(tasks);
+    assert.equal(counts.Work, 0);
+    assert.equal(counts.Personal, 1);
+    assert.equal(counts.all, 1);
+  });
+
+  test('task creation and editing update category counts dynamically', () => {
+    let tasks = [];
+    assert.equal(countTasksByCategory(tasks).all, 0);
+
+    // Create task
+    const t1 = createTask({ title: 'Study Rust', category: 'Study' });
+    tasks = [...tasks, t1];
+    let counts = countTasksByCategory(tasks);
+    assert.equal(counts.Study, 1);
+    assert.equal(counts.all, 1);
+
+    // Edit task to change category from Study to Work
+    const updated = updateTask(t1, { category: 'Work' });
+    tasks = replaceTask(tasks, updated);
+    counts = countTasksByCategory(tasks);
+    assert.equal(counts.Study, 0);
+    assert.equal(counts.Work, 1);
+    assert.equal(counts.all, 1);
+  });
+
+  test('switching task filters does not alter the underlying category totals', () => {
+    const t1 = createTask({ title: 'Work pending', category: 'Work' });
+    const t2 = toggleTaskStatus(createTask({ title: 'Work done', category: 'Work' }));
+    const t3 = createTask({ title: 'Health pending', category: 'Health' });
+    const tasks = [t1, t2, t3];
+
+    // Global category counts before filtering
+    const originalCounts = countTasksByCategory(tasks);
+    assert.equal(originalCounts.all, 3);
+    assert.equal(originalCounts.Work, 2);
+    assert.equal(originalCounts.Health, 1);
+
+    // Filter by pending only
+    const pendingTasks = applyFilters(tasks, { status: 'pending' });
+    assert.equal(pendingTasks.length, 2); // t1 and t3
+
+    // Filter by completed only
+    const completedTasks = applyFilters(tasks, { status: 'completed' });
+    assert.equal(completedTasks.length, 1); // t2 only
+
+    // Filter by category only
+    const healthTasks = applyFilters(tasks, { category: 'Health' });
+    assert.equal(healthTasks.length, 1);
+
+    // The state tasks category counts remain unchanged across filter view changes
+    const countsAfterFilters = countTasksByCategory(tasks);
+    assert.deepEqual(countsAfterFilters, originalCounts);
+  });
+
+  test('normalises untrimmed and case-insensitive categories', () => {
+    const tasks = [
+      createTask({ title: 'T1', category: 'work' }),
+      createTask({ title: 'T2', category: '  WORK  ' }),
+      createTask({ title: 'T3', category: 'Health' }),
+      { title: 'Raw Object', category: 'finance' },
+      { title: 'No Category' },
+    ];
+    const counts = countTasksByCategory(tasks);
+    assert.equal(counts.Work, 2);
+    assert.equal(counts.Health, 1);
+    assert.equal(counts.Finance, 1);
+    assert.equal(counts.General, 1);
+    assert.equal(counts.all, 5);
+  });
+
+  test('DOM badge synchronization reflects countTasksByCategory output', () => {
+    const badges = {
+      'cat-badge-all': { textContent: '0' },
+      'cat-badge-Work': { textContent: '0' },
+      'cat-badge-Personal': { textContent: '0' },
+      'cat-badge-Study': { textContent: '0' },
+      'cat-badge-Health': { textContent: '0' },
+      'cat-badge-Finance': { textContent: '0' },
+      'cat-badge-General': { textContent: '0' },
+    };
+
+    const tasks = [
+      createTask({ title: 'W1', category: 'Work' }),
+      createTask({ title: 'W2', category: 'Work' }),
+      createTask({ title: 'H1', category: 'Health' }),
+    ];
+
+    const counts = countTasksByCategory(tasks);
+    for (const [cat, count] of Object.entries(counts)) {
+      const badge = badges[`cat-badge-${cat}`];
+      if (badge) badge.textContent = String(count);
+    }
+
+    assert.equal(badges['cat-badge-all'].textContent, '3');
+    assert.equal(badges['cat-badge-Work'].textContent, '2');
+    assert.equal(badges['cat-badge-Health'].textContent, '1');
+    assert.equal(badges['cat-badge-Personal'].textContent, '0');
+    assert.equal(badges['cat-badge-Finance'].textContent, '0');
+    assert.equal(badges['cat-badge-Study'].textContent, '0');
+    assert.equal(badges['cat-badge-General'].textContent, '0');
+  });
+});
+

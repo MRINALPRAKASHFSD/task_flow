@@ -16,8 +16,12 @@ import {
   filterTasksByTimeFrame,
   computeProductivityOverview,
   computeDailyCompletionTrends,
+  computeWeeklyCompletionTrends,
+  computeMonthlyCompletionTrends,
   computeCategoryAnalytics,
   computePriorityAnalytics,
+  computePriorityWorkload,
+  computeWorkloadTimeline,
   computeProductivityInsights,
   generateTrendChartSVG,
 } from '../js/analytics.js';
@@ -74,6 +78,40 @@ describe('computeProductivityOverview', () => {
     assert.equal(overview.highPriorityPending, 1);
     assert.equal(overview.completionRate, 50); // 2/4 = 50%
     assert.equal(overview.averagePerDay, 0.3); // 2 / 7 = 0.285... -> 0.3
+  });
+
+  test('computes all-time velocity using actual elapsed days from earliest createdAt', () => {
+    const ref = new Date('2026-11-10T12:00:00Z');
+    const tasks = [
+      { id: '1', status: 'completed', completed: true, createdAt: '2026-11-01T00:00:00Z' },
+      { id: '2', status: 'completed', completed: true, createdAt: '2026-11-05T00:00:00Z' },
+      { id: '3', status: 'completed', completed: true, createdAt: '2026-11-08T00:00:00Z' },
+    ];
+
+    // Earliest is Nov 1, ref is Nov 10 => 10 elapsed days. 3 completed / 10 = 0.3
+    const overview = computeProductivityOverview(tasks, ref, 'all');
+    assert.equal(overview.total, 3);
+    assert.equal(overview.completed, 3);
+    assert.equal(overview.averagePerDay, 0.3);
+  });
+
+  test('handles 100% completed and 100% pending datasets cleanly', () => {
+    const allDone = [
+      { id: '1', status: 'completed', completed: true },
+      { id: '2', status: 'completed', completed: true },
+    ];
+    const doneOverview = computeProductivityOverview(allDone);
+    assert.equal(doneOverview.completionRate, 100);
+    assert.equal(doneOverview.pending, 0);
+
+    const allPending = [
+      { id: '1', status: 'pending', completed: false },
+      { id: '2', status: 'pending', completed: false },
+    ];
+    const pendingOverview = computeProductivityOverview(allPending);
+    assert.equal(pendingOverview.completionRate, 0);
+    assert.equal(pendingOverview.completed, 0);
+    assert.equal(pendingOverview.pending, 2);
   });
 });
 
@@ -169,6 +207,161 @@ describe('computeProductivityInsights & generateTrendChartSVG', () => {
     assert.ok(svg.includes('aria-label="Productivity Trend Chart"'));
     assert.ok(svg.includes('<rect'));
     assert.ok(svg.includes('<text'));
+  });
+});
+
+// ─── Phase 3.2: Analytics Dashboard Enhancements ─────────────────────────────
+
+describe('Weekly & Monthly Completion Trends', () => {
+  const ref = new Date('2026-11-08T12:00:00Z'); // Sunday Nov 8, 2026
+
+  test('computeWeeklyCompletionTrends groups tasks into 8 consecutive calendar weeks', () => {
+    const tasks = [
+      { id: '1', status: 'completed', completed: true, updatedAt: '2026-11-08T09:00:00Z', createdAt: '2026-11-08T08:00:00Z' },
+      { id: '2', status: 'completed', completed: true, updatedAt: '2026-11-04T10:00:00Z', createdAt: '2026-11-03T10:00:00Z' },
+      { id: '3', status: 'pending', completed: false, createdAt: '2026-11-01T10:00:00Z' },
+    ];
+
+    const weeks = computeWeeklyCompletionTrends(tasks, 8, ref);
+    assert.equal(weeks.length, 8);
+
+    // Current week (starts Nov 8)
+    const currentWeek = weeks[weeks.length - 1];
+    assert.equal(currentWeek.completedCount, 1);
+    assert.equal(currentWeek.createdCount, 1);
+
+    // Previous week (Nov 1 – Nov 7)
+    const prevWeek = weeks[weeks.length - 2];
+    assert.equal(prevWeek.completedCount, 1);
+    assert.equal(prevWeek.createdCount, 2);
+  });
+
+  test('computeWeeklyCompletionTrends smoothly spans year boundaries', () => {
+    const newYearRef = new Date('2027-01-05T12:00:00Z');
+    const weeks = computeWeeklyCompletionTrends([], 4, newYearRef);
+    assert.equal(weeks.length, 4);
+    assert.ok(weeks.some(w => w.weekStart.startsWith('2026-12') || w.weekEnd.startsWith('2027-01')));
+  });
+
+  test('computeMonthlyCompletionTrends groups tasks by calendar month prefix', () => {
+    const tasks = [
+      { id: '1', status: 'completed', completed: true, updatedAt: '2026-11-02T10:00:00Z', createdAt: '2026-11-01T10:00:00Z' },
+      { id: '2', status: 'completed', completed: true, updatedAt: '2026-10-15T10:00:00Z', createdAt: '2026-10-10T10:00:00Z' },
+      { id: '3', status: 'pending', completed: false, createdAt: '2026-10-20T10:00:00Z' },
+    ];
+
+    const months = computeMonthlyCompletionTrends(tasks, 6, ref);
+    assert.equal(months.length, 6);
+
+    // Latest month is Nov 2026
+    const nov = months[months.length - 1];
+    assert.equal(nov.year, 2026);
+    assert.equal(nov.month, 10); // 0-indexed November
+    assert.equal(nov.completedCount, 1);
+    assert.equal(nov.createdCount, 1);
+
+    // October 2026
+    const oct = months[months.length - 2];
+    assert.equal(oct.completedCount, 1);
+    assert.equal(oct.createdCount, 2);
+  });
+});
+
+describe('Category Analytics Standard Coverage & Stacked Metrics', () => {
+  test('includes all six standard categories when includeStandard is true', () => {
+    const tasks = [
+      { id: '1', category: 'Work', status: 'completed', completed: true },
+      { id: '2', category: 'Work', status: 'pending', completed: false },
+    ];
+
+    const catStats = computeCategoryAnalytics(tasks, true);
+    assert.equal(catStats.length, 6);
+
+    const work = catStats.find(c => c.category === 'Work');
+    assert.equal(work.total, 2);
+    assert.equal(work.completed, 1);
+    assert.equal(work.pending, 1);
+    assert.equal(work.rate, 50);
+    assert.equal(work.pendingRate, 50);
+
+    const health = catStats.find(c => c.category === 'Health');
+    assert.equal(health.total, 0);
+    assert.equal(health.completed, 0);
+    assert.equal(health.pending, 0);
+    assert.equal(health.rate, 0);
+    assert.equal(health.pendingRate, 0);
+  });
+
+  test('sum of category totals strictly equals task count without double counting', () => {
+    const tasks = [
+      { id: '1', category: 'Work', status: 'completed', completed: true },
+      { id: '2', category: 'Personal', status: 'pending', completed: false },
+      { id: '3', category: 'CustomLab', status: 'pending', completed: false },
+    ];
+
+    const catStats = computeCategoryAnalytics(tasks, true);
+    const sumTotals = catStats.reduce((acc, c) => acc + c.total, 0);
+    assert.equal(sumTotals, 3);
+  });
+});
+
+describe('Priority Workload & Overdue Breakdown', () => {
+  const ref = new Date('2026-11-08T12:00:00Z');
+
+  test('computePriorityAnalytics calculates pending share and excludes completed tasks from overdue', () => {
+    const tasks = [
+      { id: '1', priority: 'high', status: 'completed', completed: true, dueDate: '2026-11-01' }, // completed, NOT overdue
+      { id: '2', priority: 'high', status: 'pending', completed: false, dueDate: '2026-11-01' },   // pending, overdue
+      { id: '3', priority: 'medium', status: 'pending', completed: false, dueDate: '2026-11-10' }, // pending, on time
+      { id: '4', priority: 'low', status: 'pending', completed: false },                           // pending, unscheduled
+    ];
+
+    const stats = computePriorityAnalytics(tasks, ref);
+    assert.equal(stats.high.total, 2);
+    assert.equal(stats.high.completed, 1);
+    assert.equal(stats.high.pending, 1);
+    assert.equal(stats.high.overdue, 1); // Only the pending one is overdue
+    assert.equal(stats.high.percentage, 50); // 2 of 4 tasks = 50%
+    assert.equal(stats.high.pendingShare, 33); // 1 of 3 pending tasks = 33%
+
+    assert.equal(stats.medium.overdue, 0);
+    assert.equal(stats.low.overdue, 0);
+  });
+});
+
+describe('Workload Timeline Horizon Classification', () => {
+  const ref = new Date('2026-11-08T12:00:00Z'); // 2026-11-08
+
+  test('classifies each pending task into exactly one mutually exclusive horizon bucket', () => {
+    const tasks = [
+      { id: '1', status: 'completed', completed: true, dueDate: '2026-11-01' }, // Completed: EXCLUDED
+      { id: '2', status: 'pending', completed: false, dueDate: '2026-11-05' },   // Overdue
+      { id: '3', status: 'pending', completed: false, dueDate: '2026-11-08' },   // Due Today
+      { id: '4', status: 'pending', completed: false, dueDate: '2026-11-12' },   // Due This Week (<= Nov 15)
+      { id: '5', status: 'pending', completed: false, dueDate: '2026-11-20' },   // Due Later (> Nov 15)
+      { id: '6', status: 'pending', completed: false, dueDate: null },           // Unscheduled
+    ];
+
+    const horizon = computeWorkloadTimeline(tasks, ref);
+    assert.equal(horizon.totalPending, 5);
+    assert.equal(horizon.overdue, 1);
+    assert.equal(horizon.today, 1);
+    assert.equal(horizon.thisWeek, 1);
+    assert.equal(horizon.later, 1);
+    assert.equal(horizon.unscheduled, 1);
+
+    const sumBuckets = horizon.overdue + horizon.today + horizon.thisWeek + horizon.later + horizon.unscheduled;
+    assert.equal(sumBuckets, horizon.totalPending);
+  });
+
+  test('empty pending task list returns all zero horizon metrics', () => {
+    const horizon = computeWorkloadTimeline([], ref);
+    assert.equal(horizon.totalPending, 0);
+    assert.equal(horizon.overdue, 0);
+    assert.equal(horizon.today, 0);
+    assert.equal(horizon.thisWeek, 0);
+    assert.equal(horizon.later, 0);
+    assert.equal(horizon.unscheduled, 0);
   });
 });
 

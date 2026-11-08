@@ -37,15 +37,17 @@ export function nowISO() {
  * Format an ISO date string into a human-readable relative or absolute label.
  *
  * @param {string} isoString
+ * @param {Date} [referenceDate]
  * @returns {string}
  */
-export function formatDate(isoString) {
+export function formatDate(isoString, referenceDate = new Date()) {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
     if (isNaN(date.getTime())) return '';
-    const now = new Date();
-    const diffMs = now - date;
+    const now = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'Just now';
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
     const diffHr  = Math.floor(diffMin / 60);
@@ -64,6 +66,30 @@ export function formatDate(isoString) {
 }
 
 /**
+ * Format relative activity label and full timestamp tooltip for a task.
+ *
+ * @param {{ createdAt?: string, updatedAt?: string }} task
+ * @param {Date} [referenceDate]
+ * @returns {{ label: string, tooltip: string, isUpdated: boolean, datetime: string }}
+ */
+export function formatTaskActivity(task, referenceDate = new Date()) {
+  const targetDate = (task && (task.updatedAt || task.createdAt)) || '';
+  const isUpdated = Boolean(task && task.updatedAt && task.createdAt && task.updatedAt !== task.createdAt);
+  const relTime = formatDate(targetDate, referenceDate);
+  const relTimeFormatted = relTime.toLowerCase() === 'just now' || relTime.toLowerCase() === 'yesterday'
+    ? relTime.toLowerCase()
+    : relTime;
+  const label = `${isUpdated ? 'Updated' : 'Created'} ${relTimeFormatted}`;
+  const tooltip = targetDate ? `${isUpdated ? 'Last modified' : 'Created'}: ${new Date(targetDate).toLocaleString()}` : '';
+  return {
+    label,
+    tooltip,
+    isUpdated,
+    datetime: targetDate,
+  };
+}
+
+/**
  * Normalise a date input (YYYY-MM-DD or ISO string) to a Date object at local midnight.
  *
  * @param {string|Date} dateInput
@@ -79,7 +105,7 @@ export function parseLocalDate(dateInput) {
 
   const trimmed = dateInput.trim();
   // Check for YYYY-MM-DD
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
   if (match) {
     const year = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1;
@@ -88,6 +114,7 @@ export function parseLocalDate(dateInput) {
     if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
       return d;
     }
+    return null;
   }
 
   const parsed = new Date(trimmed);
